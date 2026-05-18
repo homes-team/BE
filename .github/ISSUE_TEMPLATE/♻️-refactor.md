@@ -1,6 +1,6 @@
 ---
 name: "♻️ Refactor"
-about: Describe this issue template's purpose here.
+about: 코드 리팩터링
 title: ''
 labels: ''
 assignees: ''

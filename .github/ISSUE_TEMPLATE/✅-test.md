@@ -1,6 +1,6 @@
 ---
 name: "✅ Test"
-about: Describe this issue template's purpose here.
+about: 테스트 코드 작성
 title: ''
 labels: ''
 assignees: ''

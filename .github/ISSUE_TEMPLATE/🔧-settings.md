@@ -1,6 +1,6 @@
 ---
 name: "\U0001F527 Settings"
-about: Describe this issue template's purpose here.
+about: 빌드, 환경 설정 작업
 title: ''
 labels: ''
 assignees: ''

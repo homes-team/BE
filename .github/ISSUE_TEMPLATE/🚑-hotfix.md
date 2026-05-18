@@ -1,6 +1,6 @@
 ---
 name: "\U0001F691 Hotfix"
-about: Describe this issue template's purpose here.
+about: 운영 환경 긴급 수정
 title: ''
 labels: ''
 assignees: ''
