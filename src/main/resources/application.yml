@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: homes-backend
+  profiles:
+    active: local # application-local.yml을 실행하겠다는 뜻
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /api-docs

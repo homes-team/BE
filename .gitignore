@@ -49,3 +49,6 @@ Thumbs.db
 # Gradle
 .gradle
 /build/
+
+# Local Settings
+src/main/resources/application-local.yml
