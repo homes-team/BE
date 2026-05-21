@@ -3,6 +3,14 @@ spring:
     name: homes-backend
   profiles:
     active: local # application-local.yml을 실행하겠다는 뜻
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB       # 파일 한 개당 최대 용량 (10MB로 업그레이드)
+      max-request-size: 50MB    # 한 번의 요청에 포함된 모든 파일 총합 용량 제한 (50MB)
+  output:
+    ansi:
+      enabled: always # 콘솔 로그 컬러 색상 적용
 
 server:
   port: 8080
