@@ -1,0 +1,189 @@
+package com.homes.backend.domain.property.service;
+
+import com.homes.backend.domain.property.dto.request.PropertyCreateReqDto;
+import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
+import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
+import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
+import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.entity.PropertyImage;
+import com.homes.backend.domain.property.repository.PropertyRepository;
+import com.homes.backend.global.exception.CustomException;
+import com.homes.backend.global.exception.GlobalErrorCode;
+import com.homes.backend.global.util.LocalFileUploader;
+import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class PropertyService {
+
+    private final PropertyRepository propertyRepository;
+    private final LocalFileUploader localFileUploader; // S3 대신 로컬 업로더 주입
+    /**
+     * GPS 표준인 4326(WGS84) 기반으로 Point를 만들어주는 팩토리
+     */
+    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
+
+    /**
+     * 매물 등록 (Create)
+     */
+    @Transactional
+    public Long createProperty(PropertyCreateReqDto reqDto, List<MultipartFile> images) throws IOException {
+        /**
+         *  Double 위도/경도를 공간 데이터(Point)로 변환
+         *  (주의: Coordinate는 X(경도), Y(위도) 순서로 넣음)
+          */
+        Point point = geometryFactory.createPoint(new Coordinate(reqDto.longitude(), reqDto.latitude()));
+
+        /**
+         *  자동 부제목 생성 로직 (예: "서울시 강남구 역삼동 123" -> "강남구 역삼동 원/투룸")
+         */
+        String generatedTitle = generateAutomatedTitle(reqDto.address(), reqDto.propertyType().getDescription());
+
+        Property property = Property.builder()
+                .title(generatedTitle)
+                .description(reqDto.description())
+                .address(reqDto.address())
+                .detailAddress(reqDto.detailAddress())
+                .tradeType(reqDto.tradeType())
+                .propertyType(reqDto.propertyType())
+                .deposit(reqDto.deposit())
+                .monthlyRent(reqDto.monthlyRent())
+                .maintenanceFee(reqDto.maintenanceFee())
+                .totalFloors(reqDto.totalFloors())
+                .currentFloor(reqDto.currentFloor())
+                .area(reqDto.area())
+                .coordinate(point)
+                .desiredBrokerageFee(reqDto.desiredBrokerageFee())
+                .tags(reqDto.tags())
+                .aiScore(85) // 가짜 AI 점수를 넣어두고, 추후 AI 모델 연동 시 고도화 예정
+                .build();
+
+        /**
+         * 다중이미지 업로드
+          */
+        if (images != null && !images.isEmpty()) {
+            for (int i = 0; i < images.size(); i++) {
+                String imageUrl = localFileUploader.upload(images.get(i), "properties"); // 파라미터 2개(파일, 폴더명)
+
+                boolean isThumbnail = (i == 0);
+
+                PropertyImage propertyImage = PropertyImage.builder()
+                        .imageUrl(imageUrl)
+                        .isThumbnail(isThumbnail)
+                        .property(property)
+                        .build();
+
+                property.getImages().add(propertyImage);
+            }
+        }
+
+        return propertyRepository.save(property).getId();
+    }
+
+    /**
+     * 주소 기반 자동 부제목 조합기
+     */
+    private String generateAutomatedTitle(String fullAddress, String propertyDescription) {
+        String[] addressParts = fullAddress.split(" ");
+        /**
+         * 카카오 주소 API 결과 : 보통 "시 구 동 ..." 순서로 배치
+         * -> 구&동 가져오기
+         */
+        if (addressParts.length >= 3) {
+            return addressParts[1] + " " + addressParts[2] + " " + propertyDescription; // 결과: "강남구 역삼동 원룸"
+        }
+
+        return fullAddress + " " + propertyDescription; // 만약 주소가 짧은 예외 케이스라면 전체 주소를 사용
+    }
+
+    /**
+     * 전체 매물 리스트 조회 (Read)
+     */
+    @Transactional(readOnly = true)
+    public List<PropertyListRespDto> getAllProperties() {
+        return propertyRepository.findAll().stream()
+                .map(PropertyListRespDto::from)
+                .toList();
+    }
+
+    /**
+     * 매물 상세 조회 (Read)
+     */
+    @Transactional(readOnly = true)
+    public PropertyDetailRespDto getProperty(Long propertyId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+
+        return PropertyDetailRespDto.from(property);
+    }
+
+    /**
+     * 매물 삭제 (Delete)
+     */
+    @Transactional
+    public void deleteProperty(Long propertyId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+
+        propertyRepository.delete(property);
+    }
+
+
+    /**
+     * 매물 수정 (Update)
+     */
+    @Transactional
+    public void updateProperty(Long propertyId, PropertyUpdateReqDto reqDto, List<MultipartFile> newImages) throws IOException {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+
+        // TODO: 로그인 기능 연동 시 추가할 부분
+        // 현재 SecurityContext에서 가져온 로그인 유저 ID와 property.getUser().getId()가 일치하는지 검증하는 로직 필요
+        // if (!property.isOwner(currentUser)) { throw new CustomException(FORBIDDEN); }
+
+        /**
+         * 수정된 데이터에 맞춰 위경도 Point 변환 및 자동 부제목 재조립
+         */
+        Point point = geometryFactory.createPoint(new Coordinate(reqDto.longitude(), reqDto.latitude()));
+        String updatedTitle = generateAutomatedTitle(reqDto.address(), reqDto.propertyType().getDescription());
+
+        property.update(
+                updatedTitle, reqDto.description(), reqDto.address(), reqDto.detailAddress(),
+                reqDto.tradeType(), reqDto.propertyType(), reqDto.deposit(),
+                reqDto.monthlyRent(), reqDto.maintenanceFee(), reqDto.totalFloors(),
+                reqDto.currentFloor(), reqDto.area(), point,
+                reqDto.desiredBrokerageFee(), reqDto.tags()
+        );
+
+        /**
+         * 새 이미지 업로드 시
+         */
+        if (newImages != null && !newImages.isEmpty()) {
+
+            property.getImages().clear();
+
+            for (int i = 0; i < newImages.size(); i++) {
+                String imageUrl = localFileUploader.upload(newImages.get(i), "properties"); // 파라미터 2개(파일, 폴더명)
+
+                PropertyImage propertyImage = PropertyImage.builder()
+                        .imageUrl(imageUrl)
+                        .isThumbnail(i == 0)
+                        .property(property)
+                        .build();
+
+                property.getImages().add(propertyImage);
+            }
+        }
+
+    }
+}

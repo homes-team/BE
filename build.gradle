@@ -33,6 +33,8 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
+    implementation 'org.hibernate.orm:hibernate-spatial:6.6.5.Final'
+    implementation 'org.locationtech.jts:jts-core:1.19.0'
 }
 
 tasks.named('test') {
