@@ -2,6 +2,7 @@ package com.homes.backend.domain.user.controller;
 
 import com.homes.backend.domain.user.dto.request.EmailCheckReqDto;
 import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
+import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.global.response.ApiResponse;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,5 +17,8 @@ public interface UserControllerDocs {
 
     @PostMapping("/signup")
     ApiResponse<UserSignupResDto> signUp(@RequestBody UserCreateReqDto request);
+
+    @PostMapping("/login")
+    ApiResponse<String> login(@RequestBody UserLoginReqDto request);
 
 }
