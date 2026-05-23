@@ -3,15 +3,20 @@ package com.homes.backend.domain.user.controller;
 import com.homes.backend.domain.user.dto.request.EmailCheckReqDto;
 import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
 import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
+import com.homes.backend.domain.user.dto.request.UserUpdatePasswordReqDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.global.response.ApiResponse;
+import com.homes.backend.global.security.UserPrincipal;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-//@RequestMapping 같은 공통 주소 매핑은 인터페이스에 둡니다.
+
 public interface UserControllerDocs {
 
-    // (나중에 여기에 @Operation 같은 지저분한 스웨거 태그들이 붙음)
     @PostMapping("/check-email")
     ApiResponse<Void> checkEmail(@RequestBody EmailCheckReqDto request);
 
@@ -20,5 +25,11 @@ public interface UserControllerDocs {
 
     @PostMapping("/login")
     ApiResponse<String> login(@RequestBody UserLoginReqDto request);
+
+    @PatchMapping("/me/password")
+    ApiResponse<Void> updatePassword(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid UserUpdatePasswordReqDto request
+    );
 
 }

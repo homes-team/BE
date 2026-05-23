@@ -2,6 +2,7 @@ package com.homes.backend.domain.user.service;
 
 import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
 import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
+import com.homes.backend.domain.user.dto.request.UserUpdatePasswordReqDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.repository.UserRepository;
@@ -64,6 +65,27 @@ public class UserService {
         return jwtTokenProvider.createToken(user.getId(), user.getEmail());
     }
 
+    /**
+     * 비밀번호 수정 기능
+     * @param userId 토큰에서 추출한 로그인한 유저의 고유 ID
+     */
+    @Transactional
+    public void updatePassword(Long userId, UserUpdatePasswordReqDto request) {
+        // 1. 토큰 주인(유저)이 진짜 DB에 존재하는지 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        // 2. 입력한 '현재 비밀번호'가 DB에 저장된 암호화된 비밀번호와 일치하는지 검증
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new CustomException(UserErrorCode.WRONG_PASSWORD); // 현재 비밀번호 틀림 에러
+        }
+
+        // 3. 검증이 끝났다면, '새로운 비밀번호'를 다시 BCrypt로 암호화
+        String encodedPassword = passwordEncoder.encode(request.newPassword());
+
+        // 4. 엔티티의 비밀번호를 업데이트
+        user.updatePassword(encodedPassword);
+    }
 
 
 }

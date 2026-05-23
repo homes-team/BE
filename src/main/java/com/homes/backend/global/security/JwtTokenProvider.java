@@ -33,4 +33,28 @@ public class JwtTokenProvider {
                 .signWith(signingKey, SignatureAlgorithm.HS256) //암호화 서명, 위에서 만든 세팅키 사용
                 .compact();
     }
+
+    // 1. 토큰에서 유저 이메일(Subject) 끄집어내는 돋보기
+    public String getEmailFromToken(String token) {
+        return io.jsonwebtoken.Jwts.parserBuilder()
+                .setSigningKey(signingKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    // 2. 토큰이 기한이 만료되지 않았는지, 유효한지 검사하는 돋보기
+    public boolean validateToken(String token) {
+        try {
+            io.jsonwebtoken.Jwts.parserBuilder()
+                    .setSigningKey(signingKey)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            // 토큰이 변조되었거나 만료되면 알아서 false를 뱉습니다.
+            return false;
+        }
+    }
 }
