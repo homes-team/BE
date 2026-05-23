@@ -1,9 +1,6 @@
 package com.homes.backend.domain.user.controller;
 
-import com.homes.backend.domain.user.dto.request.EmailCheckReqDto;
-import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
-import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
-import com.homes.backend.domain.user.dto.request.UserUpdatePasswordReqDto;
+import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.service.UserService;
 import com.homes.backend.global.response.ApiResponse;
@@ -52,6 +49,30 @@ public class UserController implements UserControllerDocs {
     ) {
         // 토큰 주인의 ID가 안전하게 전달
         userService.updatePassword(userPrincipal.getId(), request);
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Override
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestHeader("Authorization") String accessToken
+    ) {
+        userService.logout(accessToken);
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Override
+    @PostMapping("/emails/verification-requests")
+    public ApiResponse<Void> sendVerificationCode(@RequestBody @Valid EmailCheckReqDto request) {
+        userService.sendVerificationCode(request.email());
+        return ApiResponse.onSuccess(null);
+    }
+
+    @Override
+    @PostMapping("/emails/verifications")
+    public ApiResponse<Void> verifyCode(@RequestBody @Valid EmailVerificationReqDto request) {
+        userService.verifyCode(request);
         return ApiResponse.onSuccess(null);
     }
 

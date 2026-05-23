@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,33 +19,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final CustomUserDetailsService userDetailsService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 1. 요청 헤더에서 "Authorization: Bearer [토큰]" 문자열을 추출합니다.
         String token = resolveToken(request);
 
-        // 2. 토큰이 존재하고, 우리 비밀키로 검증했을 때 진짜가 맞다면?
+        // 💡 [수정] 토큰이 진짜이고 + "Redis 블랙리스트에 등록되지 않은 경우"에만 통과시킨다!
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            // 3. 토큰에서 유저 이메일을 꺼냅니다.
-            String email = jwtTokenProvider.getEmailFromToken(token);
 
-            // 4. DB에서 유저 정보를 가득 담은 UserPrincipal을 로드합니다.
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            // 🛡️ Redis에서 BLACK:토큰 조회해보기
+            String isBlackList = (String) redisTemplate.opsForValue().get("BLACK:" + token);
 
-            // 5. 시큐리티 전용 "인증 도장(Authentication)"을 쾅 찍어줍니다.
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            if (isBlackList == null) { // 블랙리스트에 없다면 (로그아웃 안 한 안전한 토큰이라면)
+                String email = jwtTokenProvider.getEmailFromToken(token);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-            // 6. 🌟 핵심: 시큐리티 비밀 금고(Context)에 이 인증 도장을 집어넣습니다!
-            // 이제 컨트롤러에서 이 유저가 누구인지 언제든 꺼내 쓸 수 있게 됩니다.
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
         }
 
-        // 문지기 역할 끝! 다음 필터나 컨트롤러로 요청을 넘겨줍니다.
         filterChain.doFilter(request, response);
     }
 

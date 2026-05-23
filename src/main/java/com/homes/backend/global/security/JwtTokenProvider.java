@@ -57,4 +57,17 @@ public class JwtTokenProvider {
             return false;
         }
     }
+
+    // 토큰의 만료 시간까지 남은 밀리초(ms)를 계산하는 메서드
+    public Long getExpiration(String token) {
+        java.util.Date expiration = io.jsonwebtoken.Jwts.parserBuilder()
+                .setSigningKey(signingKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+
+        long now = new java.util.Date().getTime();
+        return (expiration.getTime() - now);
+    }
 }
