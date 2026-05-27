@@ -10,6 +10,7 @@ import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.security.JwtTokenProvider;
+import com.homes.backend.global.security.TokenDto;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -65,20 +66,27 @@ public class UserService {
         // 3. 응답 DTO로 변환하여 반환
         return UserSignupResDto.from(savedUser);
     }
-    
-    public String login(UserLoginReqDto request) {
-        // 1. DB에서 이메일로 유저 찾기
+
+    public TokenDto login(UserLoginReqDto request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        // 2. 입력한 비밀번호와 DB에 암호화되어 저장된 비밀번호가 일치하는지 대조
-        // 시큐리티가 제공하는 matches 메서드를 써야 암호화된 비번끼리 비교가 가능
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new CustomException(UserErrorCode.WRONG_PASSWORD); // 비밀번호 틀림 에코코드 파기!
+            throw new CustomException(UserErrorCode.WRONG_PASSWORD);
         }
 
-        // 3. 비밀번호까지 통과했다면 토큰 발행
-        return jwtTokenProvider.createToken(user.getId(), user.getEmail());
+        //1. 30분, 14일짜리 토큰 세트를 구움
+        TokenDto tokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail());
+
+        //2. Refresh Token을 Redis에 "RT:유저ID"를 Key로 해서 박음 (2주 수명 똑같이 세팅)
+        redisTemplate.opsForValue().set(
+                "RT:" + user.getId(),
+                tokenDto.refreshToken(),
+                tokenDto.refreshTokenExpirationTime(),
+                java.util.concurrent.TimeUnit.MILLISECONDS
+        );
+
+        return tokenDto;
     }
 
     /**
@@ -200,6 +208,48 @@ public class UserService {
 
         // 검증 성공했으니 기존 인증 데이터는 Redis에서 삭제 처리
         redisTemplate.delete("AUTH:" + request.email());
+    }
+
+    //Refresh Token을 대조하여 토큰 세트를 통째로 재발급
+    @Transactional
+    public TokenDto refresh(String refreshToken) {
+        // 1. Bearer 떼어내기 공정
+        if (refreshToken != null && refreshToken.startsWith("Bearer ")) {
+            refreshToken = refreshToken.substring(7);
+        }
+
+        // 2. 만료되었거나 망가진 Refresh Token이면 에러
+        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
+            throw new CustomException(UserErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 3. 토큰에서 주인(UserId) 꺼내오기
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+
+        // 4. 주인 ID로 유저 정보 리얼 DB에서 다시 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        // 5. Redis에 보관 중인 진짜 Refresh Token 꺼내기
+        String savedRefreshToken = (String) redisTemplate.opsForValue().get("RT:" + userId);
+
+        // 6. 비었거나 사용자가 들고 온 거랑 다르면 "해킹 위험" 차단
+        if (savedRefreshToken == null || !savedRefreshToken.equals(refreshToken)) {
+            throw new CustomException(UserErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // 7. 검증 통과. 토큰 둘 다 새로 구움
+        TokenDto newTokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail());
+
+        // 8. Redis에 새 Refresh Token으로 갈아끼우기
+        redisTemplate.opsForValue().set(
+                "RT:" + user.getId(),
+                newTokenDto.refreshToken(),
+                newTokenDto.refreshTokenExpirationTime(),
+                java.util.concurrent.TimeUnit.MILLISECONDS
+        );
+
+        return newTokenDto;
     }
 
 }
