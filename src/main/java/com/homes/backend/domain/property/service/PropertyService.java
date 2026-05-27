@@ -6,9 +6,12 @@ import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyImage;
+import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.property.repository.PropertyRepository;
+import com.homes.backend.domain.user.entity.User;
+import com.homes.backend.domain.user.exception.UserErrorCode;
+import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
-import com.homes.backend.global.exception.GlobalErrorCode;
 import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
@@ -28,6 +31,8 @@ public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final LocalFileUploader localFileUploader; // S3 대신 로컬 업로더 주입
+    private final UserRepository userRepository;
+
     /**
      * GPS 표준인 4326(WGS84) 기반으로 Point를 만들어주는 팩토리
      */
@@ -37,7 +42,10 @@ public class PropertyService {
      * 매물 등록 (Create)
      */
     @Transactional
-    public Long createProperty(PropertyCreateReqDto reqDto, List<MultipartFile> images) throws IOException {
+    public Long createProperty(PropertyCreateReqDto reqDto, Long userId, List<MultipartFile> images) throws IOException {
+        User user=userRepository.findById(userId)
+                .orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
         /**
          *  Double 위도/경도를 공간 데이터(Point)로 변환
          *  (주의: Coordinate는 X(경도), Y(위도) 순서로 넣음)
@@ -50,6 +58,7 @@ public class PropertyService {
         String generatedTitle = generateAutomatedTitle(reqDto.address(), reqDto.propertyType().getDescription());
 
         Property property = Property.builder()
+                .user(user)
                 .title(generatedTitle)
                 .description(reqDto.description())
                 .address(reqDto.address())
@@ -122,19 +131,29 @@ public class PropertyService {
     @Transactional(readOnly = true)
     public PropertyDetailRespDto getProperty(Long propertyId) {
         Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
         return PropertyDetailRespDto.from(property);
+    }
+
+    /**
+     * 소유권 검증 (내 매물이 맞는지 확인하는 로직)
+     */
+    public void validateOwnership(Property property, Long userId) {
+        if (!property.getUser().getId().equals(userId)) {
+            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+        }
     }
 
     /**
      * 매물 삭제 (Delete)
      */
     @Transactional
-    public void deleteProperty(Long propertyId) {
+    public void deleteProperty(Long propertyId, Long userId) {
         Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
+        validateOwnership(property, userId);
         propertyRepository.delete(property);
     }
 
@@ -143,13 +162,11 @@ public class PropertyService {
      * 매물 수정 (Update)
      */
     @Transactional
-    public void updateProperty(Long propertyId, PropertyUpdateReqDto reqDto, List<MultipartFile> newImages) throws IOException {
+    public void updateProperty(Long propertyId, PropertyUpdateReqDto reqDto, List<MultipartFile> newImages, Long userId) throws IOException {
         Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
-        // TODO: 로그인 기능 연동 시 추가할 부분
-        // 현재 SecurityContext에서 가져온 로그인 유저 ID와 property.getUser().getId()가 일치하는지 검증하는 로직 필요
-        // if (!property.isOwner(currentUser)) { throw new CustomException(FORBIDDEN); }
+        validateOwnership(property, userId);
 
         /**
          * 수정된 데이터에 맞춰 위경도 Point 변환 및 자동 부제목 재조립
@@ -185,5 +202,17 @@ public class PropertyService {
             }
         }
 
+    }
+
+    /**
+     * 유저가 내놓았던 집 확인(마이페이지)
+     */
+    @Transactional(readOnly = true)
+    public List<PropertyListRespDto> getMyProperties(Long userId){
+        List<Property> myProperties = propertyRepository.findAllByUserId(userId);
+
+        return myProperties.stream()
+                .map(PropertyListRespDto::from)
+                .toList();
     }
 }

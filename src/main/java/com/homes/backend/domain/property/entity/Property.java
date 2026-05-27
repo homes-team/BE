@@ -1,5 +1,6 @@
 package com.homes.backend.domain.property.entity;
 
+import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -16,6 +17,10 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "properties")
 public class Property extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user; // 유저와 다대일 관계 매핑
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -76,12 +81,13 @@ public class Property extends BaseEntity {
     private List<String> tags = new ArrayList<>();
 
     @Builder
-    public Property(String title, String description, String address, String detailAddress,
+    public Property(User user, String title, String description, String address, String detailAddress,
                     TradeType tradeType, PropertyType propertyType, Long deposit,
                     Long monthlyRent, Long maintenanceFee, Integer totalFloors,
                     Integer currentFloor, Double area, Integer aiScore,
                     Point coordinate, Double desiredBrokerageFee,
                     List<String> tags) {
+        this.user = user;
         this.title = title;
         this.description = description;
         this.address = address;
