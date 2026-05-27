@@ -1,8 +1,12 @@
 package com.homes.backend.domain.user.controller;
 
+import com.homes.backend.domain.property.service.PropertyService;
+import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
+import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.service.UserService;
+import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -10,12 +14,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController implements UserControllerDocs {
 
     private final UserService userService;
+    private final PropertyService propertyService;
 
     @Override
     @PostMapping("/signup")
@@ -74,6 +81,20 @@ public class UserController implements UserControllerDocs {
     public ApiResponse<Void> verifyCode(@RequestBody @Valid EmailVerificationReqDto request) {
         userService.verifyCode(request);
         return ApiResponse.onSuccess(null);
+    }
+
+    @Override
+    @GetMapping("/me/properties")
+    public ApiResponse<List<PropertyListRespDto>> getMyProperties(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        if (userPrincipal == null) {
+            throw new CustomException(PropertyErrorCode.LOGIN_REQUIRED);
+        }
+
+        List<PropertyListRespDto> response = propertyService.getMyProperties(userPrincipal.getId());
+
+        return ApiResponse.onSuccess(response);
     }
 
 }
