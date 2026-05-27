@@ -9,9 +9,9 @@ import com.homes.backend.domain.property.entity.PropertyImage;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.user.entity.User;
+import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
-import com.homes.backend.global.exception.GlobalErrorCode;
 import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
@@ -44,7 +44,7 @@ public class PropertyService {
     @Transactional
     public Long createProperty(PropertyCreateReqDto reqDto, Long userId, List<MultipartFile> images) throws IOException {
         User user=userRepository.findById(userId)
-                .orElseThrow(()-> new IllegalArgumentException("존재하지 않는 유저입니다."));
+                .orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
         /**
          *  Double 위도/경도를 공간 데이터(Point)로 변환
@@ -131,7 +131,7 @@ public class PropertyService {
     @Transactional(readOnly = true)
     public PropertyDetailRespDto getProperty(Long propertyId) {
         Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
         return PropertyDetailRespDto.from(property);
     }
@@ -164,7 +164,7 @@ public class PropertyService {
     @Transactional
     public void updateProperty(Long propertyId, PropertyUpdateReqDto reqDto, List<MultipartFile> newImages, Long userId) throws IOException {
         Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
         validateOwnership(property, userId);
 

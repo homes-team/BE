@@ -60,7 +60,7 @@ public class PropertyController implements PropertyControllerDocs {
             @PathVariable Long propertyId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         if (userPrincipal == null) {
-            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+            throw new CustomException(PropertyErrorCode.LOGIN_REQUIRED);
         }
 
         propertyService.deleteProperty(propertyId, userPrincipal.getId());
@@ -77,7 +77,7 @@ public class PropertyController implements PropertyControllerDocs {
     ) throws IOException { // S3 업로드 시 발생할 수 있는 에러 처리
 
         if (userPrincipal == null) {
-            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+            throw new CustomException(PropertyErrorCode.LOGIN_REQUIRED);
         }
 
         propertyService.updateProperty(propertyId, reqDto, newImages, userPrincipal.getId());
