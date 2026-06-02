@@ -45,7 +45,7 @@ public class JwtTokenProvider {
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
-                .getSubject();
+                .get("email", String.class);
     }
 
     // 2. 토큰에서 유저 고유 ID(Long)를 안전하게 파싱해서 꺼냄

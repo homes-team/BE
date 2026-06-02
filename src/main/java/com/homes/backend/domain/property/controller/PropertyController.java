@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.controller;
 
 import com.homes.backend.domain.property.dto.request.PropertyCreateReqDto;
+import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
@@ -84,5 +85,13 @@ public class PropertyController implements PropertyControllerDocs {
         return ApiResponse.onSuccess();
     }
 
+    @Override
+    @GetMapping("/map")
+    public ApiResponse<List<PropertyListRespDto>> searchMapProperties(
+            @ModelAttribute PropertyMapSearchReqDto reqDto
+    ) {
+        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto);
+        return ApiResponse.onSuccess(response);
+    }
 
 }
