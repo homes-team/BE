@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.controller;
 
 import com.homes.backend.domain.property.dto.request.PropertyCreateReqDto;
+import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
@@ -46,5 +47,10 @@ public interface PropertyControllerDocs {
             @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
             @Parameter(hidden=true)@AuthenticationPrincipal UserPrincipal userPrincipal
     ) throws IOException;
+
+    @Operation(summary = "지도 기반 매물 검색", description = "지도의 보이는 영역(좌표) 내에 있는 매물들을 필터링하여 조회합니다.")
+    ApiResponse<List<PropertyListRespDto>> searchMapProperties(
+            @ParameterObject @ModelAttribute PropertyMapSearchReqDto reqDto
+    );
 }
 

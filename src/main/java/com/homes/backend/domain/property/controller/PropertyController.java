@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.controller;
 
 import com.homes.backend.domain.property.dto.request.PropertyCreateReqDto;
+import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
@@ -9,6 +10,7 @@ import com.homes.backend.domain.property.service.PropertyService;
 import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.UserPrincipal;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -84,5 +86,13 @@ public class PropertyController implements PropertyControllerDocs {
         return ApiResponse.onSuccess();
     }
 
+    @Override
+    @GetMapping("/map")
+    public ApiResponse<List<PropertyListRespDto>> searchMapProperties(
+            @Valid @ModelAttribute PropertyMapSearchReqDto reqDto
+    ) {
+        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto);
+        return ApiResponse.onSuccess(response);
+    }
 
 }

@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.service;
 
 import com.homes.backend.domain.property.dto.request.PropertyCreateReqDto;
+import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
@@ -14,10 +15,7 @@ import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
+import org.locationtech.jts.geom.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -120,7 +118,7 @@ public class PropertyService {
      */
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> getAllProperties() {
-        return propertyRepository.findAll().stream()
+        return propertyRepository.findAllByOrderByIdDesc().stream()
                 .map(PropertyListRespDto::from)
                 .toList();
     }
@@ -212,6 +210,54 @@ public class PropertyService {
         List<Property> myProperties = propertyRepository.findAllByUserId(userId);
 
         return myProperties.stream()
+                .map(PropertyListRespDto::from)
+                .toList();
+    }
+
+    /**
+     * 지도 영역 내 매물 검색 및 다중 필터링
+     */
+    @Transactional(readOnly = true)
+    public List<PropertyListRespDto> searchMapProperties(PropertyMapSearchReqDto reqDto) {
+
+        /**
+         * Bounding Box 생성
+         */
+        Coordinate[] coords = new Coordinate[]{
+                new Coordinate(reqDto.swLng(), reqDto.swLat()), // 남서 (좌측 하단) - 시작점
+                new Coordinate(reqDto.swLng(), reqDto.neLat()), // 북서 (좌측 상단)
+                new Coordinate(reqDto.neLng(), reqDto.neLat()), // 북동 (우측 상단)
+                new Coordinate(reqDto.neLng(), reqDto.swLat()), // 남동 (우측 하단)
+                new Coordinate(reqDto.swLng(), reqDto.swLat()) // 남서 (좌측 하단) - 끝점
+        };
+        Polygon boundingBox = geometryFactory.createPolygon(coords);
+        boundingBox.setSRID(4326); // 4236: GPS(WGS84) 표준 좌표계
+
+        /**
+         * 키워드가 null이 아닐 때만 앞뒤에 % 붙여주기
+         */
+        String searchKeyword = reqDto.keyword();
+        if (searchKeyword == null || searchKeyword.isBlank()) {
+            searchKeyword = null; // 공백이나 빈 문자열이 들어오면 null로 취급!
+        } else {
+            searchKeyword = "%" + searchKeyword + "%";
+        }
+
+        /**
+         * 필터링 조건
+         */
+        List<Property> properties = propertyRepository.findPropertiesByMapAndFilters(
+                boundingBox,
+                reqDto.tradeType(),
+                reqDto.propertyType(),
+                reqDto.minDeposit(),
+                reqDto.maxDeposit(),
+                reqDto.minMonthlyRent(),
+                reqDto.maxMonthlyRent(),
+                searchKeyword
+        );
+
+        return properties.stream()
                 .map(PropertyListRespDto::from)
                 .toList();
     }
