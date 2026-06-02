@@ -3,17 +3,22 @@ package com.homes.backend.domain.property.dto.request;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 
 public record PropertyMapSearchReqDto(
         /**
          * 지도 영역 좌표
          */
+        @NotNull(message = "남서쪽 위도는 필수입니다.")
         @Schema(description = "남서쪽 위도 (Y)", example = "37.4800")
         Double swLat,
+        @NotNull(message = "남서쪽 경도는 필수입니다.")
         @Schema(description = "남서쪽 경도 (X)", example = "127.0100")
         Double swLng,
+        @NotNull(message = "북동쪽 위도는 필수입니다.")
         @Schema(description = "북동쪽 위도 (Y)", example = "37.5100")
         Double neLat,
+        @NotNull(message = "북동쪽 경도는 필수입니다.")
         @Schema(description = "북동쪽 경도 (X)", example = "127.0500")
         Double neLng,
 

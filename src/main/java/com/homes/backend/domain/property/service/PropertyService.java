@@ -237,7 +237,9 @@ public class PropertyService {
          * 키워드가 null이 아닐 때만 앞뒤에 % 붙여주기
          */
         String searchKeyword = reqDto.keyword();
-        if (searchKeyword != null && !searchKeyword.isBlank()) {
+        if (searchKeyword == null || searchKeyword.isBlank()) {
+            searchKeyword = null; // 공백이나 빈 문자열이 들어오면 null로 취급!
+        } else {
             searchKeyword = "%" + searchKeyword + "%";
         }
 

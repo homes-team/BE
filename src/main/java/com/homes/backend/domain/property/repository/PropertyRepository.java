@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface PropertyRepository extends JpaRepository<Property, Long> {
     @Query("SELECT DISTINCT p FROM Property p LEFT JOIN p.tags t " +
-            "WHERE within(p.coordinate, :boundingBox) = true " +
+            "WHERE coveredBy(p.coordinate, :boundingBox) = true " +
             "AND (:tradeType IS NULL OR p.tradeType = :tradeType) " +
             "AND (:propertyType IS NULL OR p.propertyType = :propertyType) " +
             "AND (:minDeposit IS NULL OR p.deposit >= :minDeposit) " +
