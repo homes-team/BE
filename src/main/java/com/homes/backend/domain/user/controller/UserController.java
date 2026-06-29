@@ -112,9 +112,8 @@ public class UserController implements UserControllerDocs {
 
     @Override
     @PostMapping("/oauth/google")
-    public ResponseEntity<TokenDto> googleLogin(@RequestBody OAuthLoginReqDto reqDto) {
+    public ApiResponse<TokenDto> googleLogin(@RequestBody @Valid OAuthLoginReqDto reqDto) {
         TokenDto tokenDto = userService.googleLogin(reqDto.authorizationCode());
-        return ResponseEntity.ok(tokenDto);
+        return ApiResponse.onSuccess(tokenDto);
     }
-
 }

@@ -61,7 +61,8 @@ public class SecurityConfig {
                                 "/users/signup",
                                 "/users/oauth/**",
                                 "/users/check-email",
-                                "/users/emails/**"
+                                "/users/emails/**",
+                                "/users/refresh"
                         ).permitAll()
 
                         // Swagger 관련 프리패스 주소 (이건 기존 yml 설정에 맞게 유지)

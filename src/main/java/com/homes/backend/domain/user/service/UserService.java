@@ -25,6 +25,8 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
 import java.util.UUID;
@@ -300,23 +302,31 @@ public class UserService {
         return tokenDto;
     }
 
-    private String getGoogleEmail(String authorizationCode) {
-        RestTemplate restTemplate = new RestTemplate();
+    private String getGoogleEmail(String authorizationCode) throws CustomException {
+        // 타임아웃을 3초(3000ms)로 제한하는 RestTemplate 세팅
+        org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(3000); // 연결 제한 시간 3초
+        requestFactory.setReadTimeout(3000);    // 데이터 응답 제한 시간 3초
+
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
         ObjectMapper objectMapper = new ObjectMapper();
 
         try {
             String tokenUrl = "https://oauth2.googleapis.com/token";
 
+            // 1. 헤더 설정 (Form URL Encoded 방식 지정)
             HttpHeaders tokenHeaders = new HttpHeaders();
             tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-            String tokenBody = "code=" + authorizationCode
-                    + "&client_id=" + googleClientId
-                    + "&client_secret=" + googleClientSecret
-                    + "&redirect_uri=" + googleRedirectUri
-                    + "&grant_type=authorization_code";
+            MultiValueMap<String, String> tokenBody = new LinkedMultiValueMap<>();
+            tokenBody.add("code", authorizationCode);
+            tokenBody.add("client_id", googleClientId);
+            tokenBody.add("client_secret", googleClientSecret);
+            tokenBody.add("redirect_uri", googleRedirectUri);
+            tokenBody.add("grant_type", "authorization_code");
 
-            HttpEntity<String> tokenRequest = new HttpEntity<>(tokenBody, tokenHeaders);
+            HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(tokenBody, tokenHeaders);
             ResponseEntity<String> tokenResponse = restTemplate.postForEntity(tokenUrl, tokenRequest, String.class);
 
             // 구글이 준 JSON 데이터에서 google_access_token 빼내기
@@ -332,10 +342,18 @@ public class UserService {
             HttpEntity<Void> userRequest = new HttpEntity<>(userHeaders);
             ResponseEntity<String> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userRequest, String.class);
 
-            // 구글이 준 유저 정보 JSON 데이터에서 'email' 파싱
+            // 구글이 준 유저 정보 JSON 데이터 파싱
             JsonNode userJson = objectMapper.readTree(userResponse.getBody());
 
-            // 유저의 구글 메일 주소 리턴
+            //구글이 인증한 진짜 이메일인지 체크
+            boolean isVerified = userJson.has("verified_email") && userJson.get("verified_email").asBoolean();
+
+            if (!isVerified) {
+                // 인증되지 않은 이메일이면 예외를 던져서 진입을 컷
+                throw new CustomException(UserErrorCode.INVALID_GOOGLE_CODE);
+            }
+
+            // 검증이 완료된 안전한 메일 주소만 리턴
             return userJson.get("email").asText();
 
         } catch (Exception e) {

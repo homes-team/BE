@@ -72,5 +72,5 @@ public interface UserControllerDocs {
     );
 
     @Operation(summary = "구글 소셜 로그인 및 자동 회원가입", description = "프론트엔드로부터 Google Authorization Code를 전달받아, 실시간으로 구글 서버에서 지메일을 파싱한 뒤 소셜 가입/로그인을 진행하고 자체 JWT 토큰 세트를 반환합니다.")
-    ResponseEntity<TokenDto> googleLogin(@RequestBody OAuthLoginReqDto reqDto);
+    ApiResponse<TokenDto> googleLogin(OAuthLoginReqDto reqDto);
 }
