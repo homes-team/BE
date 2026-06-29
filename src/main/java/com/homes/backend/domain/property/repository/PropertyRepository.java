@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface PropertyRepository extends JpaRepository<Property, Long> {
     @Query("SELECT DISTINCT p FROM Property p LEFT JOIN p.tags t " +
-            "WHERE coveredBy(p.coordinate, :boundingBox) = true " +
+            "WHERE function('ST_Contains', :boundingBox, p.coordinate) = true " +
             "AND (:tradeType IS NULL OR p.tradeType = :tradeType) " +
             "AND (:propertyType IS NULL OR p.propertyType = :propertyType) " +
             "AND (:minDeposit IS NULL OR p.deposit >= :minDeposit) " +
@@ -20,7 +20,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             "AND (:minMonthlyRent IS NULL OR p.monthlyRent >= :minMonthlyRent) " +
             "AND (:maxMonthlyRent IS NULL OR p.monthlyRent <= :maxMonthlyRent) " +
             "AND (:keyword IS NULL OR t LIKE :keyword) " +
-            "ORDER BY p.id DESC") // 최신 등록순
+            "ORDER BY p.id DESC")
     List<Property> findPropertiesByMapAndFilters(
             @Param("boundingBox") Polygon boundingBox,
             @Param("tradeType") TradeType tradeType,
