@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,4 +70,7 @@ public interface UserControllerDocs {
             @Parameter(description = "Bearer 가 포함된 Refresh Token을 실어주세요.", required = true)
             @RequestHeader("RefreshToken") String refreshToken
     );
+
+    @Operation(summary = "구글 소셜 로그인 및 자동 회원가입", description = "프론트엔드로부터 Google Authorization Code를 전달받아, 실시간으로 구글 서버에서 지메일을 파싱한 뒤 소셜 가입/로그인을 진행하고 자체 JWT 토큰 세트를 반환합니다.")
+    ResponseEntity<TokenDto> googleLogin(@RequestBody OAuthLoginReqDto reqDto);
 }

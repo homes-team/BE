@@ -10,8 +10,10 @@ import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.TokenDto;
 import com.homes.backend.global.security.UserPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -106,6 +108,13 @@ public class UserController implements UserControllerDocs {
     ) {
         TokenDto tokenDto = userService.refresh(refreshToken);
         return ApiResponse.onSuccess(tokenDto);
+    }
+
+    @Override
+    @PostMapping("/oauth/google")
+    public ResponseEntity<TokenDto> googleLogin(@RequestBody OAuthLoginReqDto reqDto) {
+        TokenDto tokenDto = userService.googleLogin(reqDto.authorizationCode());
+        return ResponseEntity.ok(tokenDto);
     }
 
 }

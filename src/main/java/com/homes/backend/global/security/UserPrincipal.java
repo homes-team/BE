@@ -12,7 +12,7 @@ public class UserPrincipal implements UserDetails {
     private final String email;
     private final String password;
 
-    // 💡 생성자: 우리 User 엔티티를 받아서 시큐리티 규격 상자로 변환합니다.
+    // 생성자: User 엔티티를 받아서 시큐리티 규격 상자로 변환
     public UserPrincipal(User user) {
         this.id = user.getId();
         this.email = user.getEmail();

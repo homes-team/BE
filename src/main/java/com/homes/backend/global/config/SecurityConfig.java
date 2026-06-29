@@ -54,12 +54,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable) // 개발 중에는 CSRF 방어 잠시 끄기
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // 모든 API 주소에 대해 로그인 없이 접근 허용!
+                        .requestMatchers(
+                                "/users/login",
+                                "/users/signup",
+                                "/users/oauth/**",
+                                "/users/check-email",
+                                "/users/emails/**"
+                        ).permitAll()
+
+                        // Swagger 관련 프리패스 주소 (이건 기존 yml 설정에 맞게 유지)
+                        .requestMatchers("/api-docs", "/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/swagger-resources", "/swagger-resources/**").permitAll()
+                        .requestMatchers("/webjars/**").permitAll()
+
+                        .anyRequest().authenticated()
                 )
-                // 시큐리티가 기본으로 돌리는 문지기(UsernamePasswordAuthenticationFilter) 직전에
-                // 만든 JWT 토큰 검사 문지기를 먼저 통과하도록 정문에 배치
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class);
 

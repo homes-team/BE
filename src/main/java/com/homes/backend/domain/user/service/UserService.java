@@ -1,5 +1,7 @@
 package com.homes.backend.domain.user.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.homes.backend.domain.user.dto.request.EmailVerificationReqDto;
 import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
 import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
@@ -13,12 +15,19 @@ import com.homes.backend.global.security.JwtTokenProvider;
 import com.homes.backend.global.security.TokenDto;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.*;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +40,15 @@ public class UserService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final JavaMailSender mailSender;
     private static final long AUTH_CODE_EXPIRATION = 300L; // 인증번호 유효시간: 5분 (300초)
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String googleClientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String googleClientSecret;
+
+    @Value("${spring.security.oauth2.client.registration.google.redirect-uri}")
+    private String googleRedirectUri;
+
 
     public void checkEmailDuplication(String email) {
         if (userRepository.existsByEmail(email)) {
@@ -161,12 +179,12 @@ public class UserService {
             // 로그인 계정 주소와 메일 보내는 명의를 일치시키는 설정
             helper.setFrom("homescompanyduksung@gmail.com");
 
-            // [조치] 제목에서 구글이 오해할만한 대괄호([])를 빼고 직관적으로 적습니다.
+            // [조치] 제목에서 구글이 오해할만한 대괄호([])를 빼고 직관적으로 적기
             helper.setSubject("Homes Verification Code");
 
-            helper.setTo(email); // 받는 사람 이메일 (스웨거에 치는 주소로 배달됨!)
+            helper.setTo(email); // 받는 사람 이메일 (스웨거에 치는 주소로 배달)
 
-            // 메일 본문 내용 (가장 직관적이고 안전한 형태로 정돈)
+            // 메일 본문 내용
             String content = "<div style='margin:20px;'>" +
                     "<h3>Homes 회원가입 인증번호 안내</h3>" +
                     "<p>아래 인증번호를 화면에 입력해주세요.</p>" +
@@ -176,10 +194,9 @@ public class UserService {
 
             helper.setText(content, true); // HTML 형식 지정
 
-            // 우체부 발송!
+            // 발송
             mailSender.send(message);
-
-            System.out.println("[성공] 진짜 사용자의 이메일함으로 메일 전송 완료!");
+            //System.out.println("[성공] 진짜 사용자의 이메일함으로 메일 전송 완료!");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -202,8 +219,8 @@ public class UserService {
             throw new CustomException(UserErrorCode.WRONG_VERIFICATION_CODE); // 에러코드 정의 필요!
         }
 
-        //[선택] 검증 완료 시, 회원가입 때 "이 사람 인증된 사람 맞아?"라고 최종 확인할 수 있도록
-        //Redis에 "AUTH_SUCCESS:" 상태를 5분간 남겨두면 가입 API 보안을 더 올릴 수 있음.
+        //검증 완료 시, 회원가입 때 인증된 사람이 맞는지 최종 확인할 수 있도록
+        //Redis에 "AUTH_SUCCESS:" 상태를 5분간 남겨두면 가입 API 보안을 더 올릴 수 있음
         redisTemplate.opsForValue().set("AUTH_SUCCESS:" + request.email(), "TRUE", 5, java.util.concurrent.TimeUnit.MINUTES);
 
         // 검증 성공했으니 기존 인증 데이터는 Redis에서 삭제 처리
@@ -250,6 +267,81 @@ public class UserService {
         );
 
         return newTokenDto;
+    }
+
+    @Transactional
+    public TokenDto googleLogin(String authorizationCode) {
+        // 1. 사용자의 구글 이메일 긁어오기 (구글 서버와 실시간 HTTP 통신)
+        String email = getGoogleEmail(authorizationCode);
+
+        // 2. 회원가입 및 로그인 처리 분기
+        User user = userRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    // DB에 없으면 신규 구글 소셜 가입 진행
+                    User newUser = User.builder()
+                            .email(email)
+                            // 소셜 가입자는 비밀번호가 필요 없으므로 UUID 난수로 안전하게 암호화 처리
+                            .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                            .build();
+                    return userRepository.save(newUser);
+                });
+
+        // 3. 토큰 세트(Access/Refresh) 구워내기
+        TokenDto tokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail());
+
+        // 4. Redis 금고에 리프레시 토큰 안전하게 세팅
+        redisTemplate.opsForValue().set(
+                "RT:" + user.getId(),
+                tokenDto.refreshToken(),
+                tokenDto.refreshTokenExpirationTime(),
+                java.util.concurrent.TimeUnit.MILLISECONDS
+        );
+
+        return tokenDto;
+    }
+
+    private String getGoogleEmail(String authorizationCode) {
+        RestTemplate restTemplate = new RestTemplate();
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        try {
+            String tokenUrl = "https://oauth2.googleapis.com/token";
+
+            HttpHeaders tokenHeaders = new HttpHeaders();
+            tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            String tokenBody = "code=" + authorizationCode
+                    + "&client_id=" + googleClientId
+                    + "&client_secret=" + googleClientSecret
+                    + "&redirect_uri=" + googleRedirectUri
+                    + "&grant_type=authorization_code";
+
+            HttpEntity<String> tokenRequest = new HttpEntity<>(tokenBody, tokenHeaders);
+            ResponseEntity<String> tokenResponse = restTemplate.postForEntity(tokenUrl, tokenRequest, String.class);
+
+            // 구글이 준 JSON 데이터에서 google_access_token 빼내기
+            JsonNode tokenJson = objectMapper.readTree(tokenResponse.getBody());
+            String googleAccessToken = tokenJson.get("access_token").asText();
+
+            // 긁어온 구글 Access Token으로 유저 프로필(이메일) 요청
+            String userInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo";
+
+            HttpHeaders userHeaders = new HttpHeaders();
+            userHeaders.setBearerAuth(googleAccessToken); // Header에 'Bearer 구글토큰' 장착
+
+            HttpEntity<Void> userRequest = new HttpEntity<>(userHeaders);
+            ResponseEntity<String> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userRequest, String.class);
+
+            // 구글이 준 유저 정보 JSON 데이터에서 'email' 파싱
+            JsonNode userJson = objectMapper.readTree(userResponse.getBody());
+
+            // 유저의 구글 메일 주소 리턴
+            return userJson.get("email").asText();
+
+        } catch (Exception e) {
+            // 구글 통신 장애나 변조된 코드일 경우 예외 처리
+            throw new CustomException(UserErrorCode.INVALID_GOOGLE_CODE);
+        }
     }
 
 }
