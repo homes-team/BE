@@ -29,6 +29,8 @@ public record PropertyMapSearchReqDto(
         TradeType tradeType,
         @Schema(description = "방 종류", example = "ONE_ROOM")
         PropertyType propertyType,
+        @Schema(description = "정렬 기준 (LATEST: 최신순, FAVORITE: 찜많은순)", example = "FAVORITE")
+        String sortBy,
 
         /**
          * 가격대 필터

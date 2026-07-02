@@ -65,6 +65,13 @@ public class SecurityConfig {
                                 "/users/refresh"
                         ).permitAll()
 
+                        .requestMatchers(
+                                org.springframework.http.HttpMethod.GET,
+                                "/properties",
+                                "/properties/{propertyId}",
+                                "/properties/map"
+                        ).permitAll()
+
                         // Swagger 관련 프리패스 주소 (이건 기존 yml 설정에 맞게 유지)
                         .requestMatchers("/api-docs", "/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui", "/swagger-ui/**", "/swagger-ui.html").permitAll()

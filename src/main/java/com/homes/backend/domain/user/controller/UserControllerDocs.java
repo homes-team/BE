@@ -10,12 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -69,6 +65,12 @@ public interface UserControllerDocs {
     ApiResponse<TokenDto> refresh(
             @Parameter(description = "Bearer 가 포함된 Refresh Token을 실어주세요.", required = true)
             @RequestHeader("RefreshToken") String refreshToken
+    );
+
+    @Operation(summary = "내가 찜한 매물 확인", description = "현재 로그인한 유저가 찜한 매물 리스트를 조회합니다.")
+    @GetMapping("/me/favorites")
+    ApiResponse<List<PropertyListRespDto>> getMyFavoriteProperties(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
     );
 
     @Operation(summary = "구글 소셜 로그인 및 자동 회원가입", description = "프론트엔드로부터 Google Authorization Code를 전달받아, 실시간으로 구글 서버에서 지메일을 파싱한 뒤 소셜 가입/로그인을 진행하고 자체 JWT 토큰 세트를 반환합니다.")

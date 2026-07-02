@@ -19,7 +19,8 @@ public record PropertyListRespDto(
         Double area,
         String description,
         Integer aiScore,
-        List<String> tags
+        List<String> tags,
+        int favoriteCount
 ) {
     public static PropertyListRespDto from(Property property) {
         /**
@@ -43,7 +44,8 @@ public record PropertyListRespDto(
                 property.getArea(),
                 property.getDescription(),
                 property.getAiScore(),
-                property.getTags()
+                property.getTags(),
+                property.getFavoriteCount()
         );
     }
 }

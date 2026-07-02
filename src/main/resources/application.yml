@@ -2,7 +2,7 @@ spring:
   application:
     name: homes-backend
   profiles:
-    active: local
+    active: local # application-local.yml을 실행하겠다는 뜻
     include:
       - local
   servlet:
