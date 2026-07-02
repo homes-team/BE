@@ -6,8 +6,10 @@ import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.entity.PropertyFavorite;
 import com.homes.backend.domain.property.entity.PropertyImage;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
+import com.homes.backend.domain.property.repository.PropertyFavoriteRepository;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
@@ -30,6 +32,7 @@ public class PropertyService {
     private final PropertyRepository propertyRepository;
     private final LocalFileUploader localFileUploader; // S3 대신 로컬 업로더 주입
     private final UserRepository userRepository;
+    private final PropertyFavoriteRepository propertyFavoriteRepository;
 
     /**
      * GPS 표준인 4326(WGS84) 기반으로 Point를 만들어주는 팩토리
@@ -238,7 +241,7 @@ public class PropertyService {
          */
         String searchKeyword = reqDto.keyword();
         if (searchKeyword == null || searchKeyword.isBlank()) {
-            searchKeyword = null; // 공백이나 빈 문자열이 들어오면 null로 취급!
+            searchKeyword = null; // 공백이나 빈 문자열이 들어오면 null로 취급
         } else {
             searchKeyword = "%" + searchKeyword + "%";
         }
@@ -259,6 +262,18 @@ public class PropertyService {
 
         return properties.stream()
                 .map(PropertyListRespDto::from)
+                .toList();
+    }
+
+    /**
+     * 찜한 매물 조회
+     */
+    @Transactional(readOnly = true)
+    public List<PropertyListRespDto> getMyFavoriteProperties(Long userId) {
+        List<PropertyFavorite> favorites = propertyFavoriteRepository.findAllByUserIdWithProperty(userId);
+
+        return favorites.stream()
+                .map(favorite -> PropertyListRespDto.from(favorite.getProperty()))
                 .toList();
     }
 }

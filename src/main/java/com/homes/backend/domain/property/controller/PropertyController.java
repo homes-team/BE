@@ -5,9 +5,9 @@ import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
-import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.property.service.PropertyService;
 import com.homes.backend.global.exception.CustomException;
+import com.homes.backend.global.exception.GlobalErrorCode;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -35,7 +35,7 @@ public class PropertyController implements PropertyControllerDocs {
     ) throws IOException {
 
         if (userPrincipal == null) {
-            throw new CustomException(PropertyErrorCode.LOGIN_REQUIRED);
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
         }
 
         Long propertyId = propertyService.createProperty(reqDto, userPrincipal.getId(), images);
@@ -62,7 +62,7 @@ public class PropertyController implements PropertyControllerDocs {
             @PathVariable Long propertyId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         if (userPrincipal == null) {
-            throw new CustomException(PropertyErrorCode.LOGIN_REQUIRED);
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
         }
 
         propertyService.deleteProperty(propertyId, userPrincipal.getId());
@@ -79,7 +79,7 @@ public class PropertyController implements PropertyControllerDocs {
     ) throws IOException { // S3 업로드 시 발생할 수 있는 에러 처리
 
         if (userPrincipal == null) {
-            throw new CustomException(PropertyErrorCode.LOGIN_REQUIRED);
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
         }
 
         propertyService.updateProperty(propertyId, reqDto, newImages, userPrincipal.getId());

@@ -80,6 +80,25 @@ public class Property extends BaseEntity {
     @Column(name = "tag")
     private List<String> tags = new ArrayList<>();
 
+    @Column(nullable = false)
+    private Integer favoriteCount = 0;
+
+    /**
+     * 찜 증가
+     */
+    public void increaseFavoriteCount() {
+        this.favoriteCount++;
+    }
+
+    /**
+     * 찜 감소
+     */
+    public void decreaseFavoriteCount() {
+        if (this.favoriteCount > 0) {
+            this.favoriteCount--;
+        }
+    }
+
     @Builder
     public Property(User user, String title, String description, String address, String detailAddress,
                     TradeType tradeType, PropertyType propertyType, Long deposit,

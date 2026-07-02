@@ -20,7 +20,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
             "AND (:minMonthlyRent IS NULL OR p.monthlyRent >= :minMonthlyRent) " +
             "AND (:maxMonthlyRent IS NULL OR p.monthlyRent <= :maxMonthlyRent) " +
             "AND (:keyword IS NULL OR t LIKE :keyword) " +
-            "ORDER BY p.id DESC")
+            "ORDER BY p.id DESC")// 최신 등록순
     List<Property> findPropertiesByMapAndFilters(
             @Param("boundingBox") Polygon boundingBox,
             @Param("tradeType") TradeType tradeType,

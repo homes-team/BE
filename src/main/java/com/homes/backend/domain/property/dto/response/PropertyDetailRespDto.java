@@ -26,7 +26,8 @@ public record PropertyDetailRespDto(
         Double desiredBrokerageFee,
         List<String> tags,
         Double latitude,
-        Double longitude
+        Double longitude,
+        int favoriteCount
 ) {
     public static PropertyDetailRespDto from(Property property) {
         List<String> urls = property.getImages().stream()
@@ -52,7 +53,8 @@ public record PropertyDetailRespDto(
                 property.getDesiredBrokerageFee(),
                 property.getTags(),
                 property.getCoordinate().getY(), // 위도(Latitude)
-                property.getCoordinate().getX()  // 경도(Longitude)
+                property.getCoordinate().getX(),  // 경도(Longitude)
+                property.getFavoriteCount()
         );
     }
 }
