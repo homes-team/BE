@@ -9,7 +9,9 @@ import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
+import com.homes.backend.global.exception.GlobalErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,16 +49,23 @@ public class PropertyFavoriteService {
 
         if (existingFavorite.isPresent()){ // 이미 찜한 상태
             favoriteRepository.delete(existingFavorite.get());
-            property.decreaseFavoriteCount();
+            propertyRepository.decreaseFavoriteCount(propertyId);
             return false;
         } else{ // 찜 생성
-            PropertyFavorite newFavorite = PropertyFavorite.builder()
-                    .user(user)
-                    .property(property)
-                    .build();
-            favoriteRepository.save(newFavorite);
-            property.increaseFavoriteCount();
-            return true;
+            try {
+                PropertyFavorite newFavorite = PropertyFavorite.builder()
+                        .user(user)
+                        .property(property)
+                        .build();
+                favoriteRepository.save(newFavorite);
+                favoriteRepository.flush(); //save 직후 DB에 즉시 반영
+
+                propertyRepository.increaseFavoriteCount(propertyId);
+                return true;
+
+            } catch (DataIntegrityViolationException e) { // 이미 DB에 찜 기록이 들어가 있는데 또 넣으려고 해서 에러가 난 경우
+                throw new CustomException(GlobalErrorCode.BAD_REQUEST);
+            }
         }
     }
 }
