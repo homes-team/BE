@@ -83,6 +83,12 @@ public class Property extends BaseEntity {
     @Column(nullable = false)
     private Integer favoriteCount = 0;
 
+    @Column(nullable = false)
+    private Integer reportCount = 0;
+
+    @Column(nullable = false)
+    private boolean isSuspicious = false;
+
     /**
      * 찜 증가
      */
@@ -97,6 +103,17 @@ public class Property extends BaseEntity {
         if (this.favoriteCount > 0) {
             this.favoriteCount--;
         }
+    }
+
+    /**
+     * 신고 내역 증가
+     */
+    public void increaseReportCount() {
+        this.reportCount += 1;
+    }
+
+    public void setSuspicious(boolean isSuspicious) {
+        this.isSuspicious = isSuspicious;
     }
 
     @Builder

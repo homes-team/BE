@@ -5,6 +5,7 @@ import com.homes.backend.domain.property.entity.PropertyImage;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record PropertyListRespDto(
@@ -18,9 +19,12 @@ public record PropertyListRespDto(
         Integer currentFloor,
         Double area,
         String description,
+        LocalDateTime createdAt,
         Integer aiScore,
         List<String> tags,
-        int favoriteCount
+        Integer favoriteCount,
+        Integer reportCount,
+        boolean isSuspicious
 ) {
     public static PropertyListRespDto from(Property property) {
         /**
@@ -43,9 +47,12 @@ public record PropertyListRespDto(
                 property.getCurrentFloor(),
                 property.getArea(),
                 property.getDescription(),
+                property.getCreatedAt(),
                 property.getAiScore(),
                 property.getTags(),
-                property.getFavoriteCount()
+                property.getFavoriteCount(),
+                property.getReportCount(),
+                property.isSuspicious()
         );
     }
 }

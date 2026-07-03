@@ -1,6 +1,7 @@
 package com.homes.backend.domain.user.controller;
 
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
+import com.homes.backend.domain.property.dto.response.ReportListRespDto;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.global.response.ApiResponse;
@@ -75,4 +76,10 @@ public interface UserControllerDocs {
 
     @Operation(summary = "구글 소셜 로그인 및 자동 회원가입", description = "프론트엔드로부터 Google Authorization Code를 전달받아, 실시간으로 구글 서버에서 지메일을 파싱한 뒤 소셜 가입/로그인을 진행하고 자체 JWT 토큰 세트를 반환합니다.")
     ApiResponse<TokenDto> googleLogin(OAuthLoginReqDto reqDto);
+
+    @Operation(summary = "내가 신고한 매물 내역", description = "현재 로그인한 유저가 신고한 매물 내역 리스트를 조회합니다.")
+    @GetMapping("me/reports")
+    ApiResponse<List<ReportListRespDto>> getMyReports(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
 }
