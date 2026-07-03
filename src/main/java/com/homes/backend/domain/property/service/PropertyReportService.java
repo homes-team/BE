@@ -13,6 +13,7 @@ import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,22 +59,25 @@ public class PropertyReportService {
             savedCustomReason = reqDto.customReason();
         }
 
-        PropertyReport report = PropertyReport.builder()
-                .reason(reqDto.reason())
-                .customReason(savedCustomReason)
-                .property(property)
-                .reporter(user)
-                .build();
-        reportRepository.save(report);
-
         /**
-         * 의심 매물 자동 전환
+         * 저장
          */
-        property.increaseReportCount();
-        if (property.getReportCount() >= 5) {
-            property.setSuspicious(true);
-        }
+        try {
+            PropertyReport report = PropertyReport.builder()
+                    .reason(reqDto.reason())
+                    .customReason(savedCustomReason)
+                    .property(property)
+                    .reporter(user)
+                    .build();
+            reportRepository.save(report);
 
+            reportRepository.flush();
+
+            propertyRepository.increaseReportCountAndCheckSuspicious(propertyId);
+
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(PropertyErrorCode.ALREADY_REPORTED);
+        }
     }
 
 

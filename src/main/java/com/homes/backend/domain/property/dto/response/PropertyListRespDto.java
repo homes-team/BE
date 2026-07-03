@@ -23,7 +23,6 @@ public record PropertyListRespDto(
         Integer aiScore,
         List<String> tags,
         Integer favoriteCount,
-        Integer reportCount,
         boolean isSuspicious
 ) {
     public static PropertyListRespDto from(Property property) {
@@ -51,7 +50,6 @@ public record PropertyListRespDto(
                 property.getAiScore(),
                 property.getTags(),
                 property.getFavoriteCount(),
-                property.getReportCount(),
                 property.isSuspicious()
         );
     }

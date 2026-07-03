@@ -28,7 +28,6 @@ public record PropertyDetailRespDto(
         Double latitude,
         Double longitude,
         Integer favoriteCount,
-        Integer reportCount,
         boolean isSuspicious
 ) {
     public static PropertyDetailRespDto from(Property property) {
@@ -57,7 +56,6 @@ public record PropertyDetailRespDto(
                 property.getCoordinate().getY(), // 위도(Latitude)
                 property.getCoordinate().getX(),  // 경도(Longitude)
                 property.getFavoriteCount(),
-                property.getReportCount(),
                 property.isSuspicious()
         );
     }

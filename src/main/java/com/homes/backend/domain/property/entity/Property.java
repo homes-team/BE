@@ -89,33 +89,6 @@ public class Property extends BaseEntity {
     @Column(nullable = false)
     private boolean isSuspicious = false;
 
-    /**
-     * 찜 증가
-     */
-    public void increaseFavoriteCount() {
-        this.favoriteCount++;
-    }
-
-    /**
-     * 찜 감소
-     */
-    public void decreaseFavoriteCount() {
-        if (this.favoriteCount > 0) {
-            this.favoriteCount--;
-        }
-    }
-
-    /**
-     * 신고 내역 증가
-     */
-    public void increaseReportCount() {
-        this.reportCount += 1;
-    }
-
-    public void setSuspicious(boolean isSuspicious) {
-        this.isSuspicious = isSuspicious;
-    }
-
     @Builder
     public Property(User user, String title, String description, String address, String detailAddress,
                     TradeType tradeType, PropertyType propertyType, Long deposit,
