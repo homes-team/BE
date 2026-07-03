@@ -39,7 +39,7 @@ public class PropertyFavoriteService {
          * 본인 매물인지 검증(본인 매물일시 찜 불가)
          */
         if (property.getUser().getId().equals(userId)) {
-            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+            throw new CustomException(PropertyErrorCode.CANNOT_FAVORITE_OWN_PROPERTY);
         }
 
         /**

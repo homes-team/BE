@@ -1,6 +1,8 @@
 package com.homes.backend.domain.user.controller;
 
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
+import com.homes.backend.domain.property.dto.response.ReportListRespDto;
+import com.homes.backend.domain.property.service.PropertyReportService;
 import com.homes.backend.domain.property.service.PropertyService;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
@@ -24,6 +26,7 @@ public class UserController implements UserControllerDocs {
 
     private final UserService userService;
     private final PropertyService propertyService;
+    private final PropertyReportService propertyReportService;
 
     @Override
     @PostMapping("/signup")
@@ -125,5 +128,17 @@ public class UserController implements UserControllerDocs {
     public ApiResponse<TokenDto> googleLogin(@RequestBody @Valid OAuthLoginReqDto reqDto) {
         TokenDto tokenDto = userService.googleLogin(reqDto.authorizationCode());
         return ApiResponse.onSuccess(tokenDto);
+    }
+
+    @Override
+    @GetMapping("/me/reports")
+    public ApiResponse<List<ReportListRespDto>> getMyReports(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ){
+        if(userPrincipal == null){
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
+        }
+        List<ReportListRespDto> response= propertyReportService.getMyReports(userPrincipal.getId());
+        return ApiResponse.onSuccess(response);
     }
 }

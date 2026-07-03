@@ -49,4 +49,15 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Property p SET p.favoriteCount = p.favoriteCount - 1 WHERE p.id = :propertyId AND p.favoriteCount > 0")
     void decreaseFavoriteCount(@Param("propertyId") Long propertyId);
+
+    /**
+     * 신고 횟수 증가,
+     * 신고 5회 이상 시 의심 매물 자동 전환
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Property p " +
+            "SET p.reportCount = p.reportCount + 1, " +
+            "    p.isSuspicious = (CASE WHEN p.reportCount + 1 >= 5 THEN true ELSE p.isSuspicious END) " +
+            "WHERE p.id = :propertyId")
+    void increaseReportCountAndCheckSuspicious(@Param("propertyId") Long propertyId);
 }

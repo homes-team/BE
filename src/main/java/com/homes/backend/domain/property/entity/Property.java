@@ -83,21 +83,11 @@ public class Property extends BaseEntity {
     @Column(nullable = false)
     private Integer favoriteCount = 0;
 
-    /**
-     * 찜 증가
-     */
-    public void increaseFavoriteCount() {
-        this.favoriteCount++;
-    }
+    @Column(nullable = false)
+    private Integer reportCount = 0;
 
-    /**
-     * 찜 감소
-     */
-    public void decreaseFavoriteCount() {
-        if (this.favoriteCount > 0) {
-            this.favoriteCount--;
-        }
-    }
+    @Column(nullable = false)
+    private boolean isSuspicious = false;
 
     @Builder
     public Property(User user, String title, String description, String address, String detailAddress,
