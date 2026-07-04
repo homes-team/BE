@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,8 +28,9 @@ public class RealtorService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocalFileUploader localFileUploader;
+    private final RealtorAccountWriter realtorAccountWriter;
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public RealtorSignupResDto signUp(
             RealtorSignupReqDto request,
             MultipartFile businessCertImage,
@@ -59,7 +61,6 @@ public class RealtorService {
                 .phone(request.phone())
                 .role("AGENT")
                 .build();
-        User savedUser = userRepository.save(user);
 
         // 5. 서류 이미지 업로드 (S3 연동 전까지는 로컬 업로더 사용)
         String businessCertUrl = localFileUploader.upload(businessCertImage, "agent-certs");
@@ -67,19 +68,19 @@ public class RealtorService {
         String profileImageUrl = localFileUploader.upload(profileImage, "agent-profiles");
 
         // 6. 중개사 프로필 생성 (관리자 승인 전까지 isVerified=false로 대기)
-        Agent agent = Agent.builder()
-                .user(savedUser)
-                .businessNum(request.businessNum())
-                .officeName(request.officeName())
-                .businessCertUrl(businessCertUrl)
-                .agentCertUrl(agentCertUrl)
-                .profileImageUrl(profileImageUrl)
-                .build();
-        Agent savedAgent = agentRepository.save(agent);
+        Agent savedAgent;
+        try {
+            savedAgent = realtorAccountWriter.write(user, request, businessCertUrl, agentCertUrl, profileImageUrl);
+        } catch (RuntimeException e) {
+            localFileUploader.delete(businessCertUrl);
+            localFileUploader.delete(agentCertUrl);
+            localFileUploader.delete(profileImageUrl);
+            throw e;
+        }
 
         // 가입에 사용된 이메일 인증 증표는 파기
         redisTemplate.delete("AUTH_SUCCESS:" + request.email());
 
-        return RealtorSignupResDto.from(savedUser, savedAgent);
+        return RealtorSignupResDto.from(savedAgent.getUser(), savedAgent);
     }
 }
