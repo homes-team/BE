@@ -87,15 +87,16 @@ public class JwtTokenProvider {
     }
 
     // Access + Refresh 토큰 세트 발급
-    public TokenDto createTokenSet(Long userId, String email) {
+    public TokenDto createTokenSet(Long userId, String email, String role) {
         long now = (new java.util.Date()).getTime();
         java.util.Date accessTokenExpiresIn = new java.util.Date(now + ACCESS_TOKEN_EXPIRATION);
         java.util.Date refreshTokenExpiresIn = new java.util.Date(now + REFRESH_TOKEN_EXPIRATION);
-        
-        // 1. Access Token 생성
+
+        // 1. Access Token 생성 (role 클레임 포함: 프론트가 로그인 직후 중개사/일반 유저 UI를 분기할 수 있도록)
         String accessToken = Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .claim("email", email)
+                .claim("role", role)
                 .setExpiration(accessTokenExpiresIn)
                 .signWith(signingKey, SignatureAlgorithm.HS256)
                 .compact();

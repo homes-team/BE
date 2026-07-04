@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
@@ -62,6 +63,17 @@ public class GlobalExceptionHandler {
         log.warn("MethodArgumentTypeMismatchException: {}", e.getMessage());
         return ResponseEntity.status(GlobalErrorCode.INVALID_INPUT.getHttpStatus())
                 .body(ApiResponse.onFailure(GlobalErrorCode.INVALID_INPUT));
+    }
+
+    /**
+     * 필수 멀티파트 파일(@RequestPart)이 누락된 경우
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiResponse<String>> handleMissingServletRequestPartException(MissingServletRequestPartException e) {
+        String errorMessage = "필수 파라미터 '" + e.getRequestPartName() + "'가 누락되었습니다.";
+        log.warn("MissingServletRequestPartException: {}", errorMessage);
+        return ResponseEntity.status(GlobalErrorCode.INVALID_INPUT.getHttpStatus())
+                .body(ApiResponse.onFailure(GlobalErrorCode.INVALID_INPUT.getCode(), errorMessage));
     }
 
     /**
