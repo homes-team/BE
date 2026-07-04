@@ -96,7 +96,7 @@ public class UserService {
         }
 
         //1. 30분, 14일짜리 토큰 세트를 구움
-        TokenDto tokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail());
+        TokenDto tokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail(), user.getRole());
 
         //2. Refresh Token을 Redis에 "RT:유저ID"를 Key로 해서 박음 (2주 수명 똑같이 세팅)
         redisTemplate.opsForValue().set(
@@ -258,7 +258,7 @@ public class UserService {
         }
 
         // 7. 검증 통과. 토큰 둘 다 새로 구움
-        TokenDto newTokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail());
+        TokenDto newTokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail(), user.getRole());
 
         // 8. Redis에 새 Refresh Token으로 갈아끼우기
         redisTemplate.opsForValue().set(
@@ -289,7 +289,7 @@ public class UserService {
                 });
 
         // 3. 토큰 세트(Access/Refresh) 구워내기
-        TokenDto tokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail());
+        TokenDto tokenDto = jwtTokenProvider.createTokenSet(user.getId(), user.getEmail(), user.getRole());
 
         // 4. Redis 금고에 리프레시 토큰 안전하게 세팅
         redisTemplate.opsForValue().set(

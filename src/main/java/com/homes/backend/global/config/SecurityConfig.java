@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/users/oauth/**",
                                 "/users/check-email",
                                 "/users/emails/**",
-                                "/users/refresh"
+                                "/users/refresh",
+                                "/users/realtors"
                         ).permitAll()
 
                         .requestMatchers(

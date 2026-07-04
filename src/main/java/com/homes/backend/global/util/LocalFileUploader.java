@@ -31,4 +31,22 @@ public class LocalFileUploader {
             throw new RuntimeException("파일 업로드 실패");
         }
     }
+
+    /**
+          * 트랜잭션 실패 등으로 인해 이미 업로드된 파일을 정리(보상)하기 위한 삭제 메서드.
+          */
+    public void delete(String fileUrl) {
+        if (fileUrl == null || fileUrl.isBlank()) return;
+        try {
+            String relativePath = fileUrl.replace("http://localhost:8080/temp-images/", "");
+            File file = new File(LOCAL_DIR + relativePath);
+            if (file.exists() && !file.delete()) {
+                log.warn("업로드된 파일 삭제 실패: {}", file.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            log.warn("업로드된 파일 삭제 중 예외 발생: {}", fileUrl, e);
+        }
+    }
+
 }
+
