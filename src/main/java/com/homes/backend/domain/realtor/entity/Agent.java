@@ -30,7 +30,7 @@ public class Agent extends BaseEntity {
     @Column(name = "is_verified", nullable = false) // 중개사 자격 인증 여부(디폴트 false)
     private boolean isVerified = false;
 
-    `@Column`(name = "business_num", nullable = false, unique = true, length = 50) // 사업자 등록번호
+    @Column(name = "business_num", nullable = false, unique = true, length = 50) // 사업자 등록번호
     private String businessNum;
 
     @Column(name = "profile_image_url", length = 255) // 중개사 프로필 사진 경로
