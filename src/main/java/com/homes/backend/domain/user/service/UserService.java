@@ -32,6 +32,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -405,17 +407,27 @@ public class UserService {
         JsonNode verifiedCustomer = detail.path("verifiedCustomer");
         String name = verifiedCustomer.path("name").asText(null);
         String phone = verifiedCustomer.path("phoneNumber").asText(null);
+        if (name == null || name.isBlank() || phone == null || phone.isBlank()) {
+            throw new CustomException(UserErrorCode.IDENTITY_VERIFICATION_NOT_COMPLETED);
+        }
         user.verifyIdentity(name, phone);
     }
 
     // 포트원 V2 본인인증 단건 조회 API 호출 (GET /identity-verifications/{id})
     private JsonNode getPortOneIdentityVerification(String identityVerificationId) {
-        RestTemplate restTemplate = new RestTemplate();
+        // 연결 3초, 응답 60초로 제한 (포트원 권장 타임아웃)
+        org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(3000);
+        requestFactory.setReadTimeout(60000);
+
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "PortOne " + portoneApiSecret);
 
         HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
-        String url = "https://api.portone.io/identity-verifications/" + identityVerificationId;
+        String encodedId = URLEncoder.encode(identityVerificationId, StandardCharsets.UTF_8);
+        String url = "https://api.portone.io/identity-verifications/" + encodedId;
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, httpEntity, String.class);
