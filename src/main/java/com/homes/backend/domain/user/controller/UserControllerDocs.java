@@ -3,6 +3,7 @@ package com.homes.backend.domain.user.controller;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.dto.response.ReportListRespDto;
 import com.homes.backend.domain.user.dto.request.*;
+import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.TokenDto;
@@ -81,5 +82,22 @@ public interface UserControllerDocs {
     @GetMapping("me/reports")
     ApiResponse<List<ReportListRespDto>> getMyReports(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
+
+    @Operation(summary = "실명 인증 요청", description = "프론트엔드에서 포트원(PortOne) SDK로 본인인증(PASS/문자)을 완료한 뒤 발급받은 identityVerificationId를 전달받아, " +
+            "포트원 서버에 검증을 요청하고 성공 시 로그인한 본인의 실명/전화번호를 반영합니다.")
+    @PostMapping("/me/verification")
+    ApiResponse<IdentityVerificationResDto> verifyIdentity(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid IdentityVerificationReqDto request
+    );
+
+    @Operation(summary = "실명 인증 강제 동기화 (관리자 전용)", description = "포트원은 본인인증 완료를 알려주는 웹훅을 제공하지 않기 때문에, " +
+            "\"인증은 분명 완료했는데 마이페이지에 반영이 안 된다\"는 문의가 들어왔을 때 관리자가 identityVerificationId로 포트원 서버를 재조회해 " +
+            "해당 유저의 인증 상태를 강제로 맞춰주는 예외 처리용 API입니다. role이 ADMIN인 유저만 호출할 수 있습니다.")
+    @PostMapping("/me/verification/callback")
+    ApiResponse<IdentityVerificationResDto> forceSyncIdentityVerification(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid AdminIdentityVerificationSyncReqDto request
     );
 }

@@ -60,4 +60,10 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
+
+    public void verifyIdentity(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+        this.isIdentityVerified = true;
+    }
 }

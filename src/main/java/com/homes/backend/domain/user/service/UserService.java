@@ -2,10 +2,13 @@ package com.homes.backend.domain.user.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.homes.backend.domain.user.dto.request.AdminIdentityVerificationSyncReqDto;
 import com.homes.backend.domain.user.dto.request.EmailVerificationReqDto;
+import com.homes.backend.domain.user.dto.request.IdentityVerificationReqDto;
 import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
 import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
 import com.homes.backend.domain.user.dto.request.UserUpdatePasswordReqDto;
+import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.repository.UserRepository;
@@ -29,6 +32,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -51,6 +56,8 @@ public class UserService {
     @Value("${spring.security.oauth2.client.registration.google.redirect-uri}")
     private String googleRedirectUri;
 
+    @Value("${portone.api-secret}")
+    private String portoneApiSecret;
 
     public void checkEmailDuplication(String email) {
         if (userRepository.existsByEmail(email)) {
@@ -359,6 +366,74 @@ public class UserService {
         } catch (Exception e) {
             // 구글 통신 장애나 변조된 코드일 경우 예외 처리
             throw new CustomException(UserErrorCode.INVALID_GOOGLE_CODE);
+        }
+    }
+
+    // 실명 인증: 본인(유저)이 프론트에서 포트원 인증을 마치고 identityVerificationId를 넘겨줌
+    @Transactional
+    public IdentityVerificationResDto verifyIdentity(Long userId, IdentityVerificationReqDto request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        if (user.isIdentityVerified()) {
+            throw new CustomException(UserErrorCode.ALREADY_IDENTITY_VERIFIED);
+        }
+
+        JsonNode detail = getPortOneIdentityVerification(request.identityVerificationId());
+        applyVerifiedIdentity(user, detail);
+
+        return IdentityVerificationResDto.from(user);
+    }
+
+    // 실명 인증 강제 동기화: 포트원은 실명 인증 완료를 알려주는 웹훅을 제공하지 않으므로,
+    // "인증은 했는데 마이페이지에 반영이 안 됐다" 문의가 왔을 때 관리자가 재조회해서 수동으로 맞춰주는 예외 처리용 API
+    @Transactional
+    public IdentityVerificationResDto forceSyncIdentityVerification(AdminIdentityVerificationSyncReqDto request) {
+        User user = userRepository.findById(request.userId())
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        JsonNode detail = getPortOneIdentityVerification(request.identityVerificationId());
+        applyVerifiedIdentity(user, detail);
+
+        return IdentityVerificationResDto.from(user);
+    }
+
+    private void applyVerifiedIdentity(User user, JsonNode detail) {
+        String status = detail.path("status").asText();
+        if (!"VERIFIED".equals(status)) {
+            throw new CustomException(UserErrorCode.IDENTITY_VERIFICATION_NOT_COMPLETED);
+        }
+
+        JsonNode verifiedCustomer = detail.path("verifiedCustomer");
+        String name = verifiedCustomer.path("name").asText(null);
+        String phone = verifiedCustomer.path("phoneNumber").asText(null);
+        if (name == null || name.isBlank() || phone == null || phone.isBlank()) {
+            throw new CustomException(UserErrorCode.IDENTITY_VERIFICATION_NOT_COMPLETED);
+        }
+        user.verifyIdentity(name, phone);
+    }
+
+    // 포트원 V2 본인인증 단건 조회 API 호출 (GET /identity-verifications/{id})
+    private JsonNode getPortOneIdentityVerification(String identityVerificationId) {
+        // 연결 3초, 응답 60초로 제한 (포트원 권장 타임아웃)
+        org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(3000);
+        requestFactory.setReadTimeout(60000);
+
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "PortOne " + portoneApiSecret);
+
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+        String encodedId = URLEncoder.encode(identityVerificationId, StandardCharsets.UTF_8);
+        String url = "https://api.portone.io/identity-verifications/" + encodedId;
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, httpEntity, String.class);
+            return new ObjectMapper().readTree(response.getBody());
+        } catch (Exception e) {
+            throw new CustomException(UserErrorCode.PORTONE_COMMUNICATION_ERROR);
         }
     }
 
