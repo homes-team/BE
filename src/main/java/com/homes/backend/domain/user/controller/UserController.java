@@ -5,6 +5,7 @@ import com.homes.backend.domain.property.dto.response.ReportListRespDto;
 import com.homes.backend.domain.property.service.PropertyReportService;
 import com.homes.backend.domain.property.service.PropertyService;
 import com.homes.backend.domain.user.dto.request.*;
+import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.service.UserService;
 import com.homes.backend.global.exception.CustomException;
@@ -139,6 +140,37 @@ public class UserController implements UserControllerDocs {
             throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
         }
         List<ReportListRespDto> response= propertyReportService.getMyReports(userPrincipal.getId());
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @PostMapping("/me/verification")
+    public ApiResponse<IdentityVerificationResDto> verifyIdentity(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid IdentityVerificationReqDto request
+    ) {
+        if (userPrincipal == null) {
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
+        }
+
+        IdentityVerificationResDto response = userService.verifyIdentity(userPrincipal.getId(), request);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @PostMapping("/me/verification/callback")
+    public ApiResponse<IdentityVerificationResDto> forceSyncIdentityVerification(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid AdminIdentityVerificationSyncReqDto request
+    ) {
+        if (userPrincipal == null) {
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
+        }
+        if (!"ADMIN".equals(userPrincipal.getRole())) {
+            throw new CustomException(GlobalErrorCode.FORBIDDEN);
+        }
+
+        IdentityVerificationResDto response = userService.forceSyncIdentityVerification(request);
         return ApiResponse.onSuccess(response);
     }
 }
