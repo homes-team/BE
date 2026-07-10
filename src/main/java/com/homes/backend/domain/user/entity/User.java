@@ -66,4 +66,9 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
         this.phone = phone;
         this.isIdentityVerified = true;
     }
+
+    public void updateProfile(String nickname, String usagePurpose) {
+        this.nickname = nickname;
+        this.usagePurpose = usagePurpose;
+    }
 }
