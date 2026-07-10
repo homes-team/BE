@@ -21,6 +21,7 @@ import com.homes.backend.global.security.TokenDto;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
@@ -158,6 +159,14 @@ public class UserService {
         String nickname = request.nickname() != null ? request.nickname() : user.getNickname();
         String usagePurpose = request.usagePurpose() != null ? request.usagePurpose() : user.getUsagePurpose();
         user.updateProfile(nickname, usagePurpose);
+
+        try {
+            // saveAndFlush로 즉시 UPDATE를 날려, DB unique 제약 위반을 여기서 바로 잡는다
+            // (Dirty Checking에만 맡기면 트랜잭션 커밋 시점까지 반영이 미뤄져 여기서 못 잡음)
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(UserErrorCode.DUPLICATE_NICKNAME);
+        }
 
         return UserUpdateProfileResDto.from(user);
     }

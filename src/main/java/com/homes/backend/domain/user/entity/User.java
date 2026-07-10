@@ -36,7 +36,7 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
     @Column(length = 30) // 실명
     private String name;
 
-    @Column(length = 50) // 닉네임
+    @Column(unique = true, length = 50) // 닉네임
     private String nickname;
 
     @Builder.Default
