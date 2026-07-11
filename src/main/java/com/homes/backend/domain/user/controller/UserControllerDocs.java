@@ -110,4 +110,11 @@ public interface UserControllerDocs {
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody @Valid UserUpdateProfileReqDto request
     );
+
+    @Operation(summary = "내가 최근 본 방 조회", description = "현재 로그인한 유저가 최근에 조회한 매물 리스트를 최신순으로 조회합니다.")
+    @GetMapping("/me/recent-views")
+    ApiResponse<List<PropertyListRespDto>> getMyRecentViews(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
+
 }

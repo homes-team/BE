@@ -33,7 +33,10 @@ public interface PropertyControllerDocs {
     ApiResponse<List<PropertyListRespDto>> getAllProperties();
 
     @Operation(summary = "매물 상세 조회", description = "매물 ID를 통해 특정 매물의 상세 정보를 조회합니다.")
-    ApiResponse<PropertyDetailRespDto> getProperty(@PathVariable Long propertyId);
+    ApiResponse<PropertyDetailRespDto> getProperty(
+            @PathVariable Long propertyId,
+            @Parameter(hidden=true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
 
     @Operation(summary = "매물 삭제", description = "매물 ID를 통해 특정 매물을 삭제합니다.")
     ApiResponse<Void> deleteProperty(

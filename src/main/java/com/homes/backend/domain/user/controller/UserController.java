@@ -4,6 +4,7 @@ import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.dto.response.ReportListRespDto;
 import com.homes.backend.domain.property.service.PropertyReportService;
 import com.homes.backend.domain.property.service.PropertyService;
+import com.homes.backend.domain.property.service.RecentViewService;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
@@ -29,6 +30,7 @@ public class UserController implements UserControllerDocs {
     private final UserService userService;
     private final PropertyService propertyService;
     private final PropertyReportService propertyReportService;
+    private final RecentViewService recentViewService;
 
     @Override
     @PostMapping("/signup")
@@ -186,6 +188,19 @@ public class UserController implements UserControllerDocs {
         }
 
         UserUpdateProfileResDto response = userService.updateProfile(userPrincipal.getId(), request);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @GetMapping("/me/recent-views")
+    public ApiResponse<List<PropertyListRespDto>> getMyRecentViews(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        if (userPrincipal == null) {
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
+        }
+
+        List<PropertyListRespDto> response = recentViewService.getMyRecentViews(userPrincipal.getId());
         return ApiResponse.onSuccess(response);
     }
 }
