@@ -23,6 +23,11 @@ public interface RecentViewRepository extends JpaRepository<RecentView, Long> {
      */
     List<RecentView> findTop20ByUserIdOrderByViewedAtDesc(Long userId);
 
+    /**
+     * 최근 본 방 기록 저장 및 시간 갱신 (네이티브 UPSERT)
+     * * 사용자가 동일 매물을 동시에 여러 번 조회할 때
+     * 발생할 수 있는 동시성 이슈 및 유니크 제약조건 위반을 방지합니다.
+     */
     @Modifying
     @Query(value = "INSERT INTO recent_view (user_id, property_id, viewed_at, created_at, updated_at) " +
             "VALUES (:userId, :propertyId, NOW(), NOW(), NOW()) " +
