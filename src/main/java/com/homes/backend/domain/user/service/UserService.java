@@ -10,6 +10,7 @@ import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
 import com.homes.backend.domain.user.dto.request.UserUpdatePasswordReqDto;
 import com.homes.backend.domain.user.dto.request.UserUpdateProfileReqDto;
 import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
+import com.homes.backend.domain.user.dto.response.UserProfileResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.dto.response.UserUpdateProfileResDto;
 import com.homes.backend.domain.user.entity.User;
@@ -77,6 +78,17 @@ public class UserService {
             // 중복 시 에러 코드 실어 핸들러가 가로챔
             throw new CustomException(UserErrorCode.DUPLICATE_EMAIL);
         }
+    }
+
+    /**
+     * 마이페이지 회원정보 조회
+     * @param userId 토큰에서 추출한 로그인한 유저의 고유 ID
+     */
+    public UserProfileResDto getMyProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        return UserProfileResDto.from(user);
     }
 
     @Transactional

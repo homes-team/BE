@@ -4,6 +4,7 @@ import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.dto.response.ReportListRespDto;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
+import com.homes.backend.domain.user.dto.response.UserProfileResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
 import com.homes.backend.domain.user.dto.response.UserUpdateProfileResDto;
 import com.homes.backend.global.response.ApiResponse;
@@ -100,6 +101,12 @@ public interface UserControllerDocs {
     ApiResponse<IdentityVerificationResDto> forceSyncIdentityVerification(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody @Valid AdminIdentityVerificationSyncReqDto request
+    );
+
+    @Operation(summary = "마이페이지 회원정보 조회", description = "로그인한 유저 본인의 회원정보(이메일, 실명, 닉네임, 전화번호, 실명 인증 여부, 이용 목적, 평판 점수 등)를 조회합니다.")
+    @GetMapping("/me")
+    ApiResponse<UserProfileResDto> getMyProfile(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
     );
 
     @Operation(summary = "회원정보 수정", description = "마이페이지에서 닉네임과 이용 목적을 수정합니다. " +
