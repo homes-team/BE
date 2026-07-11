@@ -6,6 +6,7 @@ import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.service.PropertyService;
+import com.homes.backend.domain.property.service.RecentViewService;
 import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.exception.GlobalErrorCode;
 import com.homes.backend.global.response.ApiResponse;
@@ -25,6 +26,7 @@ import java.util.List;
 @RequestMapping("/properties")
 public class PropertyController implements PropertyControllerDocs {
     private final PropertyService propertyService;
+    private final RecentViewService recentViewService;
 
     @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -51,8 +53,14 @@ public class PropertyController implements PropertyControllerDocs {
 
     @Override
     @GetMapping("/{propertyId}")
-    public ApiResponse<PropertyDetailRespDto> getProperty(@PathVariable Long propertyId) {
+    public ApiResponse<PropertyDetailRespDto> getProperty(
+            @PathVariable Long propertyId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
         PropertyDetailRespDto response = propertyService.getProperty(propertyId);
+        if (userPrincipal != null) { // 로그인한 유저라면 최근 본 방 기록
+            recentViewService.addRecentView(userPrincipal.getId(), propertyId);
+        }
         return ApiResponse.onSuccess(response);
     }
 
