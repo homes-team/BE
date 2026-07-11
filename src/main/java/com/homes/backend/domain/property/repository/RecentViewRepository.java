@@ -35,4 +35,9 @@ public interface RecentViewRepository extends JpaRepository<RecentView, Long> {
             "DO UPDATE SET viewed_at = NOW(), updated_at = NOW()",
             nativeQuery = true)
     void upsertRecentView(@Param("userId") Long userId, @Param("propertyId") Long propertyId);
+
+    /**
+     * 회원 탈퇴 시 본인의 최근 본 방 기록 일괄 삭제
+     */
+    void deleteAllByUserId(Long userId);
 }

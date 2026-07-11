@@ -18,6 +18,7 @@ import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.property.repository.PropertyFavoriteRepository;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.property.repository.PropertyReportRepository;
+import com.homes.backend.domain.property.repository.RecentViewRepository;
 import com.homes.backend.domain.realtor.repository.AgentRepository;
 import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.security.JwtTokenProvider;
@@ -56,6 +57,7 @@ public class UserService {
     private final PropertyRepository propertyRepository;
     private final PropertyFavoriteRepository propertyFavoriteRepository;
     private final PropertyReportRepository propertyReportRepository;
+    private final RecentViewRepository recentViewRepository;
     private final AgentRepository agentRepository;
     private static final long AUTH_CODE_EXPIRATION = 300L; // 인증번호 유효시간: 5분 (300초)
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -183,11 +185,11 @@ public class UserService {
      * 회원 탈퇴: DB에서 회원 정보를 완전히 삭제한다.
      * 등록된 매물이 남아있으면, 다른 유저의 찜/신고가 그 매물에 걸려있을 수 있어 안전하게 정리할 수 없으므로
      * 먼저 매물을 삭제(DELETE /properties/{id})하도록 안내하고 탈퇴를 막는다.
-     * 본인 소유의 찜/신고/중개사 프로필은 다른 유저의 데이터에 영향을 주지 않으므로 함께 정리한다.
+     * 본인 소유의 찜/신고/최근 본 방 기록/중개사 프로필은 다른 유저의 데이터에 영향을 주지 않으므로 함께 정리한다.
      * @param userId 토큰에서 추출한 로그인한 유저의 고유 ID
      */
     @Transactional
-    public void deleteAccount(Long userId) {
+    public void deleteAccount(Long userId, String accessToken) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
@@ -197,16 +199,25 @@ public class UserService {
 
         propertyFavoriteRepository.deleteAllByUserId(userId);
         propertyReportRepository.deleteAllByReporterId(userId);
+        recentViewRepository.deleteAllByUserId(userId);
         agentRepository.deleteByUserId(userId);
         userRepository.delete(user);
 
         // 탈퇴한 계정으로 새 토큰을 재발급받지 못하도록 Refresh Token도 함께 폐기
         redisTemplate.delete("RT:" + userId);
+
+        // 지금 요청에 쓰인 Access Token도 만료 전까지 즉시 무효화
+        blacklistAccessToken(accessToken);
     }
 
     //Redis를 활용한 로그아웃 (블랙리스트 등록)
     @Transactional
     public void logout(String accessToken) {
+        blacklistAccessToken(accessToken);
+    }
+
+    // 남은 유효시간만큼 Redis에 "BLACK:" 접두사로 등록해 해당 Access Token을 즉시 무효화
+    private void blacklistAccessToken(String accessToken) {
         // 1. 토큰이 무조건 "Bearer "로 시작하니까 알맹이만 쏙 빼내기
         if (accessToken != null && accessToken.startsWith("Bearer ")) {
             accessToken = accessToken.substring(7);

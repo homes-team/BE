@@ -207,13 +207,14 @@ public class UserController implements UserControllerDocs {
     @Override
     @DeleteMapping("/me")
     public ApiResponse<Void> deleteAccount(
-            @AuthenticationPrincipal UserPrincipal userPrincipal
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestHeader("Authorization") String accessToken
     ) {
         if (userPrincipal == null) {
             throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
         }
 
-        userService.deleteAccount(userPrincipal.getId());
+        userService.deleteAccount(userPrincipal.getId(), accessToken);
         return ApiResponse.onSuccess();
     }
 }

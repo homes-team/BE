@@ -118,10 +118,13 @@ public interface UserControllerDocs {
     );
 
     @Operation(summary = "회원 탈퇴", description = "로그인한 유저의 회원 정보를 DB에서 완전히 삭제합니다. " +
-            "본인이 찜한 기록/신고 내역/중개사 프로필은 함께 삭제되지만, 등록한 매물이 남아있으면 먼저 매물을 삭제해야 탈퇴할 수 있습니다.")
+            "본인이 찜한 기록/신고 내역/중개사 프로필은 함께 삭제되지만, 등록한 매물이 남아있으면 먼저 매물을 삭제해야 탈퇴할 수 있습니다. " +
+            "탈퇴에 사용된 Access Token은 즉시 블랙리스트에 등록되어 더 이상 사용할 수 없습니다.")
     @DeleteMapping("/me")
     ApiResponse<Void> deleteAccount(
-            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Parameter(description = "Bearer 가 포함된 Access Token을 실어주세요.", required = true)
+            @RequestHeader("Authorization") String accessToken
     );
 
 }
