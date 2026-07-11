@@ -203,4 +203,17 @@ public class UserController implements UserControllerDocs {
         List<PropertyListRespDto> response = recentViewService.getMyRecentViews(userPrincipal.getId());
         return ApiResponse.onSuccess(response);
     }
+
+    @Override
+    @DeleteMapping("/me")
+    public ApiResponse<Void> deleteAccount(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        if (userPrincipal == null) {
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
+        }
+
+        userService.deleteAccount(userPrincipal.getId());
+        return ApiResponse.onSuccess();
+    }
 }

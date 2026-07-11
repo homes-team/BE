@@ -117,4 +117,11 @@ public interface UserControllerDocs {
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
     );
 
+    @Operation(summary = "회원 탈퇴", description = "로그인한 유저의 회원 정보를 DB에서 완전히 삭제합니다. " +
+            "본인이 찜한 기록/신고 내역/중개사 프로필은 함께 삭제되지만, 등록한 매물이 남아있으면 먼저 매물을 삭제해야 탈퇴할 수 있습니다.")
+    @DeleteMapping("/me")
+    ApiResponse<Void> deleteAccount(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
+
 }
