@@ -8,8 +8,10 @@ import com.homes.backend.domain.user.dto.request.IdentityVerificationReqDto;
 import com.homes.backend.domain.user.dto.request.UserCreateReqDto;
 import com.homes.backend.domain.user.dto.request.UserLoginReqDto;
 import com.homes.backend.domain.user.dto.request.UserUpdatePasswordReqDto;
+import com.homes.backend.domain.user.dto.request.UserUpdateProfileReqDto;
 import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
+import com.homes.backend.domain.user.dto.response.UserUpdateProfileResDto;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.domain.user.exception.UserErrorCode;
@@ -19,6 +21,7 @@ import com.homes.backend.global.security.TokenDto;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
@@ -136,6 +139,36 @@ public class UserService {
 
         // 4. 엔티티의 비밀번호를 업데이트
         user.updatePassword(encodedPassword);
+    }
+
+    /**
+     * 마이페이지 회원정보(닉네임, 이용 목적) 수정.
+     * 실명(name)/전화번호(phone)는 실명 인증(verifyIdentity)으로만 변경 가능하므로 여기서는 다루지 않는다.
+     * PATCH 시맨틱: 값을 보내지 않은(null) 필드는 기존 값을 그대로 유지한다.
+     * @param userId 토큰에서 추출한 로그인한 유저의 고유 ID
+     */
+    @Transactional
+    public UserUpdateProfileResDto updateProfile(Long userId, UserUpdateProfileReqDto request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        if (request.nickname() != null && userRepository.existsByNicknameAndIdNot(request.nickname(), userId)) {
+            throw new CustomException(UserErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        String nickname = request.nickname() != null ? request.nickname() : user.getNickname();
+        String usagePurpose = request.usagePurpose() != null ? request.usagePurpose() : user.getUsagePurpose();
+        user.updateProfile(nickname, usagePurpose);
+
+        try {
+            // saveAndFlush로 즉시 UPDATE를 날려, DB unique 제약 위반을 여기서 바로 잡는다
+            // (Dirty Checking에만 맡기면 트랜잭션 커밋 시점까지 반영이 미뤄져 여기서 못 잡음)
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(UserErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        return UserUpdateProfileResDto.from(user);
     }
 
     //Redis를 활용한 로그아웃 (블랙리스트 등록)

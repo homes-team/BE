@@ -8,6 +8,7 @@ import com.homes.backend.domain.property.service.RecentViewService;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
+import com.homes.backend.domain.user.dto.response.UserUpdateProfileResDto;
 import com.homes.backend.domain.user.service.UserService;
 import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.exception.GlobalErrorCode;
@@ -173,6 +174,20 @@ public class UserController implements UserControllerDocs {
         }
 
         IdentityVerificationResDto response = userService.forceSyncIdentityVerification(request);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @PatchMapping("/me")
+    public ApiResponse<UserUpdateProfileResDto> updateProfile(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid UserUpdateProfileReqDto request
+    ) {
+        if (userPrincipal == null) {
+            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
+        }
+
+        UserUpdateProfileResDto response = userService.updateProfile(userPrincipal.getId(), request);
         return ApiResponse.onSuccess(response);
     }
 

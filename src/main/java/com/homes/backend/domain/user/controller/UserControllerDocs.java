@@ -5,6 +5,7 @@ import com.homes.backend.domain.property.dto.response.ReportListRespDto;
 import com.homes.backend.domain.user.dto.request.*;
 import com.homes.backend.domain.user.dto.response.IdentityVerificationResDto;
 import com.homes.backend.domain.user.dto.response.UserSignupResDto;
+import com.homes.backend.domain.user.dto.response.UserUpdateProfileResDto;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.TokenDto;
 import com.homes.backend.global.security.UserPrincipal;
@@ -99,6 +100,15 @@ public interface UserControllerDocs {
     ApiResponse<IdentityVerificationResDto> forceSyncIdentityVerification(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody @Valid AdminIdentityVerificationSyncReqDto request
+    );
+
+    @Operation(summary = "회원정보 수정", description = "마이페이지에서 닉네임과 이용 목적을 수정합니다. " +
+            "값을 보내지 않은 필드는 기존 값이 유지됩니다(부분 수정). " +
+            "실명/전화번호는 실명 인증을 통해서만 변경할 수 있으므로 이 API로는 수정할 수 없습니다.")
+    @PatchMapping("/me")
+    ApiResponse<UserUpdateProfileResDto> updateProfile(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody @Valid UserUpdateProfileReqDto request
     );
 
     @Operation(summary = "내가 최근 본 방 조회", description = "현재 로그인한 유저가 최근에 조회한 매물 리스트를 최신순으로 조회합니다.")

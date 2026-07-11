@@ -4,6 +4,7 @@ import com.homes.backend.global.response.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -74,6 +75,16 @@ public class GlobalExceptionHandler {
         log.warn("MissingServletRequestPartException: {}", errorMessage);
         return ResponseEntity.status(GlobalErrorCode.INVALID_INPUT.getHttpStatus())
                 .body(ApiResponse.onFailure(GlobalErrorCode.INVALID_INPUT.getCode(), errorMessage));
+    }
+
+    /**
+     * 요청 바디를 읽을 수 없는 경우 (JSON 파싱 실패, 인코딩 손상 등)
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("HttpMessageNotReadableException: {}", e.getMessage());
+        return ResponseEntity.status(GlobalErrorCode.INVALID_INPUT.getHttpStatus())
+                .body(ApiResponse.onFailure(GlobalErrorCode.INVALID_INPUT));
     }
 
     /**
