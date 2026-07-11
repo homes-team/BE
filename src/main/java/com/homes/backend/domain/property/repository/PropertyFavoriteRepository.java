@@ -27,4 +27,9 @@ public interface PropertyFavoriteRepository extends JpaRepository<PropertyFavori
      */
     @Query("SELECT pf FROM PropertyFavorite pf JOIN FETCH pf.property WHERE pf.user.id=:userId")
     List<PropertyFavorite> findAllByUserIdWithProperty(@Param("userId") Long userId);
+
+    /**
+     * 회원 탈퇴 시 본인이 찜한 기록 일괄 삭제
+     */
+    void deleteAllByUserId(Long userId);
 }

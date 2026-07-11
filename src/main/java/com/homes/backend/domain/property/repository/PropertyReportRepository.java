@@ -17,4 +17,9 @@ public interface PropertyReportRepository extends JpaRepository<PropertyReport,L
      * 내가 신고한 내역 리스트 조회
      */
     List<PropertyReport> findAllByReporterId(Long reporterId);
+
+    /**
+     * 회원 탈퇴 시 본인이 신고한 내역 일괄 삭제
+     */
+    void deleteAllByReporterId(Long reporterId);
 }

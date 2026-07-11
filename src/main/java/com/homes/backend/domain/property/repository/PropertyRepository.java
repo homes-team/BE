@@ -34,6 +34,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     );
 
     List<Property> findAllByUserId(Long userId);
+    boolean existsByUserId(Long userId);
     List<Property> findAllByOrderByIdDesc(); // 최신 등록순
 
     /**
