@@ -59,7 +59,11 @@ public class PropertyController implements PropertyControllerDocs {
     ) {
         PropertyDetailRespDto response = propertyService.getProperty(propertyId);
         if (userPrincipal != null) { // 로그인한 유저라면 최근 본 방 기록
-            recentViewService.addRecentView(userPrincipal.getId(), propertyId);
+            try {
+                recentViewService.addRecentView(userPrincipal.getId(), propertyId);
+            } catch (Exception e) {
+                // 최근 본 기록 실패는 응답에 영향 x, 넘어가기
+            }
         }
         return ApiResponse.onSuccess(response);
     }
