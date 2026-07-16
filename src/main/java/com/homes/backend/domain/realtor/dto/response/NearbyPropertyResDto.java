@@ -18,7 +18,7 @@ public record NearbyPropertyResDto(
                 projection.getId(),
                 projection.getAddress(),
                 projection.getDetailAddress(),
-                TradeType.valueOf(projection.getTradeType()),
+                projection.getTradeType() != null ? TradeType.valueOf(projection.getTradeType()) : null,
                 projection.getDeposit(),
                 projection.getMonthlyRent(),
                 projection.getDesiredBrokerageFee(),
