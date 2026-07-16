@@ -44,4 +44,24 @@ public class Agent extends BaseEntity {
 
     @Column(name = "office_name", length = 50) // 중개사무소 이름
     private String officeName;
+
+    @Column(name = "office_address", length = 255) // 중개사무소 주소
+    private String officeAddress;
+
+    @Column(name = "office_latitude") // 중개사무소 위도
+    private Double officeLatitude;
+
+    @Column(name = "office_longitude") // 중개사무소 경도
+    private Double officeLongitude;
+
+    /**
+     * 마이페이지 회원정보(사무소 정보) 수정.
+     * 사업자등록번호/인증서류/인증여부는 관리자 승인과 직결되므로 여기서 다루지 않는다.
+     */
+    public void updateOfficeProfile(String officeName, String officeAddress, Double officeLatitude, Double officeLongitude) {
+        this.officeName = officeName;
+        this.officeAddress = officeAddress;
+        this.officeLatitude = officeLatitude;
+        this.officeLongitude = officeLongitude;
+    }
 }

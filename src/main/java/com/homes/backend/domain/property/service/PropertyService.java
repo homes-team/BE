@@ -8,6 +8,7 @@ import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyFavorite;
 import com.homes.backend.domain.property.entity.PropertyImage;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.property.repository.PropertyFavoriteRepository;
 import com.homes.backend.domain.property.repository.PropertyRepository;
@@ -76,6 +77,7 @@ public class PropertyService {
                 .desiredBrokerageFee(reqDto.desiredBrokerageFee())
                 .tags(reqDto.tags())
                 .aiScore(85) // 가짜 AI 점수를 넣어두고, 추후 AI 모델 연동 시 고도화 예정
+                .status(PropertyStatus.AVAILABLE)
                 .build();
 
         /**

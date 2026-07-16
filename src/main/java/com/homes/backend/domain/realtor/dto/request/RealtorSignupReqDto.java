@@ -35,5 +35,14 @@ public record RealtorSignupReqDto(
         @Schema(description = "사업자등록번호", example = "123-45-67890")
         @NotBlank(message = "사업자등록번호는 필수입니다.")
         @Pattern(regexp = "^\\d{3}-\\d{2}-\\d{5}$", message = "사업자등록번호 형식이 올바르지 않습니다. (예: 123-45-67890)")
-        String businessNum
+        String businessNum,
+
+        @Schema(description = "중개사무소 주소 (선택, 나중에 등록 가능)", example = "서울 강남구 역삼동 123-45")
+        String officeAddress,
+
+        @Schema(description = "중개사무소 위도 (지도 API에서 추출, 선택)", example = "37.4979")
+        Double officeLatitude,
+
+        @Schema(description = "중개사무소 경도 (지도 API에서 추출, 선택)", example = "127.0276")
+        Double officeLongitude
 ) {}

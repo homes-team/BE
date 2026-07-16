@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.repository;
 
 import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
 import org.locationtech.jts.geom.Polygon;
@@ -36,6 +37,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     List<Property> findAllByUserId(Long userId);
     boolean existsByUserId(Long userId);
     List<Property> findAllByOrderByIdDesc(); // 최신 등록순
+    List<Property> findAllByStatus(PropertyStatus status);
 
     /**
      * 찜 개수 증가
