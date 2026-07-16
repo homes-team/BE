@@ -5,6 +5,7 @@ import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
+import com.homes.backend.domain.property.service.PropertyRankingService;
 import com.homes.backend.domain.property.service.PropertyService;
 import com.homes.backend.domain.property.service.RecentViewService;
 import com.homes.backend.global.exception.CustomException;
@@ -27,6 +28,7 @@ import java.util.List;
 public class PropertyController implements PropertyControllerDocs {
     private final PropertyService propertyService;
     private final RecentViewService recentViewService;
+    private final PropertyRankingService propertyRankingService;
 
     @Override
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -58,15 +60,26 @@ public class PropertyController implements PropertyControllerDocs {
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         PropertyDetailRespDto response = propertyService.getProperty(propertyId);
-        if (userPrincipal != null) { // 로그인한 유저라면 최근 본 방 기록
+
+        // 최근 본 방 기록
+        if (userPrincipal != null) { // 로그인한 유저라면
             try {
                 recentViewService.addRecentView(userPrincipal.getId(), propertyId);
             } catch (Exception e) {
                 // 최근 본 기록 실패는 응답에 영향 x, 넘어가기
             }
         }
+
+        // 상세 조회 시 랭킹 점수 1점 증가
+        try {
+            propertyRankingService.incrementViewScore(propertyId);
+        } catch (Exception e) {
+            // Redis 장애가 메인 상세 조회를 막지 않도록 방어
+        }
+
         return ApiResponse.onSuccess(response);
     }
+
 
     @Override
     @DeleteMapping("/{propertyId}")
@@ -104,6 +117,13 @@ public class PropertyController implements PropertyControllerDocs {
             @Valid @ModelAttribute PropertyMapSearchReqDto reqDto
     ) {
         List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @GetMapping("/surge-rankings")
+    public ApiResponse<List<PropertyListRespDto>> getSurgeRankings() {
+        List<PropertyListRespDto> response = propertyRankingService.getSurgeRankings();
         return ApiResponse.onSuccess(response);
     }
 
