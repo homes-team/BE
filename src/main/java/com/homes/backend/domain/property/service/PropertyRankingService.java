@@ -14,7 +14,6 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class PropertyRankingService {
     private final StringRedisTemplate redisTemplate;
     private final PropertyRepository propertyRepository;
