@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -89,13 +90,20 @@ public class Property extends BaseEntity {
     @Column(nullable = false)
     private boolean isSuspicious = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PropertyStatus status; // 거래가능/거래완료
+
+    @Column(name = "deal_completed_at")
+    private LocalDateTime dealCompletedAt; // 거래완료 처리된 시점 (거래가능 상태면 NULL)
+
     @Builder
     public Property(User user, String title, String description, String address, String detailAddress,
                     TradeType tradeType, PropertyType propertyType, Long deposit,
                     Long monthlyRent, Long maintenanceFee, Integer totalFloors,
                     Integer currentFloor, Double area, Integer aiScore,
                     Point coordinate, Double desiredBrokerageFee,
-                    List<String> tags) {
+                    List<String> tags, PropertyStatus status) {
         this.user = user;
         this.title = title;
         this.description = description;
@@ -113,6 +121,15 @@ public class Property extends BaseEntity {
         this.coordinate = coordinate;
         this.desiredBrokerageFee = desiredBrokerageFee;
         this.tags = tags;
+        this.status = status;
+    }
+
+    /**
+     * 거래 완료 처리
+     */
+    public void completeDeal() {
+        this.status = PropertyStatus.COMPLETED;
+        this.dealCompletedAt = LocalDateTime.now();
     }
 
     /**

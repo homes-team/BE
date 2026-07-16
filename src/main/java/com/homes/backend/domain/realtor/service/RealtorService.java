@@ -1,6 +1,12 @@
 package com.homes.backend.domain.realtor.service;
 
+import com.homes.backend.domain.property.entity.PropertyStatus;
+import com.homes.backend.domain.property.repository.PropertyDistanceProjection;
+import com.homes.backend.domain.property.repository.PropertyRepository;
+import com.homes.backend.domain.realtor.dto.request.AgentUpdateProfileReqDto;
 import com.homes.backend.domain.realtor.dto.request.RealtorSignupReqDto;
+import com.homes.backend.domain.realtor.dto.response.AgentProfileResDto;
+import com.homes.backend.domain.realtor.dto.response.NearbyPropertyResDto;
 import com.homes.backend.domain.realtor.dto.response.RealtorSignupResDto;
 import com.homes.backend.domain.realtor.entity.Agent;
 import com.homes.backend.domain.realtor.exception.RealtorErrorCode;
@@ -18,13 +24,18 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RealtorService {
 
+    private static final int NEARBY_PROPERTIES_LIMIT = 20;
+
     private final UserRepository userRepository;
     private final AgentRepository agentRepository;
+    private final PropertyRepository propertyRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocalFileUploader localFileUploader;
@@ -82,5 +93,57 @@ public class RealtorService {
         redisTemplate.delete("AUTH_SUCCESS:" + request.email());
 
         return RealtorSignupResDto.from(savedAgent.getUser(), savedAgent);
+    }
+
+    /**
+     * 중개사 마이페이지 - 본인 프로필 수정 (사무소 정보만).
+     * PATCH 시맨틱: 값을 보내지 않은(null) 필드는 기존 값을 그대로 유지한다.
+     */
+    @Transactional
+    public AgentProfileResDto updateMyProfile(Long userId, AgentUpdateProfileReqDto request) {
+        Agent agent = agentRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        String officeName = request.officeName() != null ? request.officeName() : agent.getOfficeName();
+        String officeAddress = request.officeAddress() != null ? request.officeAddress() : agent.getOfficeAddress();
+        Double officeLatitude = request.officeLatitude() != null ? request.officeLatitude() : agent.getOfficeLatitude();
+        Double officeLongitude = request.officeLongitude() != null ? request.officeLongitude() : agent.getOfficeLongitude();
+
+        agent.updateOfficeProfile(officeName, officeAddress, officeLatitude, officeLongitude);
+
+        return AgentProfileResDto.from(agent);
+    }
+
+    /**
+     * 중개사 마이페이지 - 본인 프로필 조회
+     */
+    public AgentProfileResDto getMyProfile(Long userId) {
+        Agent agent = agentRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        return AgentProfileResDto.from(agent);
+    }
+
+    /**
+     * 중개사 마이페이지 - 사무소 기준 거리순으로 정렬된 거래가능 매물 목록 조회
+     */
+    public List<NearbyPropertyResDto> getNearbyAvailableProperties(Long userId) {
+        Agent agent = agentRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        if (agent.getOfficeLatitude() == null || agent.getOfficeLongitude() == null) {
+            throw new CustomException(RealtorErrorCode.OFFICE_LOCATION_NOT_SET);
+        }
+
+        List<PropertyDistanceProjection> nearbyProperties = propertyRepository.findByStatusOrderByDistance(
+                PropertyStatus.AVAILABLE,
+                agent.getOfficeLatitude(),
+                agent.getOfficeLongitude(),
+                NEARBY_PROPERTIES_LIMIT
+        );
+
+        return nearbyProperties.stream()
+                .map(NearbyPropertyResDto::from)
+                .toList();
     }
 }
