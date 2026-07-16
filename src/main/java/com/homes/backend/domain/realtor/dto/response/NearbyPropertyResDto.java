@@ -1,7 +1,7 @@
 package com.homes.backend.domain.realtor.dto.response;
 
-import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.TradeType;
+import com.homes.backend.domain.property.repository.PropertyDistanceProjection;
 
 public record NearbyPropertyResDto(
         Long propertyId,
@@ -13,16 +13,16 @@ public record NearbyPropertyResDto(
         Double desiredBrokerageFee,
         Double distanceInMeters
 ) {
-    public static NearbyPropertyResDto from(Property property, double distanceInMeters) {
+    public static NearbyPropertyResDto from(PropertyDistanceProjection projection) {
         return new NearbyPropertyResDto(
-                property.getId(),
-                property.getAddress(),
-                property.getDetailAddress(),
-                property.getTradeType(),
-                property.getDeposit(),
-                property.getMonthlyRent(),
-                property.getDesiredBrokerageFee(),
-                distanceInMeters
+                projection.getId(),
+                projection.getAddress(),
+                projection.getDetailAddress(),
+                TradeType.valueOf(projection.getTradeType()),
+                projection.getDeposit(),
+                projection.getMonthlyRent(),
+                projection.getDesiredBrokerageFee(),
+                projection.getDistanceInMeters()
         );
     }
 }

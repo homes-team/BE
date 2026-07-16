@@ -37,7 +37,25 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     List<Property> findAllByUserId(Long userId);
     boolean existsByUserId(Long userId);
     List<Property> findAllByOrderByIdDesc(); // 최신 등록순
-    List<Property> findAllByStatus(PropertyStatus status);
+
+    /**
+     * 주어진 좌표(중개사무소) 기준으로 거래가능한 매물을 거리순으로 조회 (DB 레벨 공간 연산 + LIMIT 적용)
+     */
+    @Query(value = "SELECT p.id AS id, p.address AS address, p.detail_address AS detailAddress, " +
+            "p.trade_type AS tradeType, p.deposit AS deposit, p.monthly_rent AS monthlyRent, " +
+            "p.desired_brokerage_fee AS desiredBrokerageFee, " +
+            "ST_DistanceSphere(p.coordinate, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)) AS distanceInMeters " +
+            "FROM properties p " +
+            "WHERE p.status = :#{#status.name()} " +
+            "ORDER BY distanceInMeters ASC " +
+            "LIMIT :limit",
+            nativeQuery = true)
+    List<PropertyDistanceProjection> findByStatusOrderByDistance(
+            @Param("status") PropertyStatus status,
+            @Param("lat") double lat,
+            @Param("lng") double lng,
+            @Param("limit") int limit
+    );
 
     /**
      * 찜 개수 증가

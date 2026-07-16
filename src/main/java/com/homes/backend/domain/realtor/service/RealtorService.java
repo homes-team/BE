@@ -1,7 +1,7 @@
 package com.homes.backend.domain.realtor.service;
 
-import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
+import com.homes.backend.domain.property.repository.PropertyDistanceProjection;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.realtor.dto.request.AgentUpdateProfileReqDto;
 import com.homes.backend.domain.realtor.dto.request.RealtorSignupReqDto;
@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -32,7 +31,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class RealtorService {
 
-    private static final double EARTH_RADIUS_METERS = 6371000;
+    private static final int NEARBY_PROPERTIES_LIMIT = 20;
 
     private final UserRepository userRepository;
     private final AgentRepository agentRepository;
@@ -136,28 +135,15 @@ public class RealtorService {
             throw new CustomException(RealtorErrorCode.OFFICE_LOCATION_NOT_SET);
         }
 
-        List<Property> availableProperties = propertyRepository.findAllByStatus(PropertyStatus.AVAILABLE);
+        List<PropertyDistanceProjection> nearbyProperties = propertyRepository.findByStatusOrderByDistance(
+                PropertyStatus.AVAILABLE,
+                agent.getOfficeLatitude(),
+                agent.getOfficeLongitude(),
+                NEARBY_PROPERTIES_LIMIT
+        );
 
-        return availableProperties.stream()
-                .map(property -> {
-                    double distance = calculateDistanceInMeters(
-                            agent.getOfficeLatitude(), agent.getOfficeLongitude(),
-                            property.getCoordinate().getY(), property.getCoordinate().getX()
-                    );
-                    return NearbyPropertyResDto.from(property, distance);
-                })
-                .sorted(Comparator.comparingDouble(NearbyPropertyResDto::distanceInMeters))
+        return nearbyProperties.stream()
+                .map(NearbyPropertyResDto::from)
                 .toList();
-    }
-
-    // 하버사인 공식으로 두 좌표 간 거리(m) 계산
-    private double calculateDistanceInMeters(double lat1, double lon1, double lat2, double lon2) {
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS_METERS * c;
     }
 }
