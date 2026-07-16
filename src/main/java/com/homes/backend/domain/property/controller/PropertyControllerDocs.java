@@ -55,5 +55,8 @@ public interface PropertyControllerDocs {
     ApiResponse<List<PropertyListRespDto>> searchMapProperties(
             @ParameterObject @ModelAttribute PropertyMapSearchReqDto reqDto
     );
+
+    @Operation(summary = "매물 랭킹 조회", description = "최근 가장 조회수가 높은 상위 10개의 매물 리스트를 실시간으로 조회합니다.")
+    ApiResponse<List<PropertyListRespDto>> getSurgeRankings();
 }
 
