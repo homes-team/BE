@@ -11,10 +11,12 @@ import com.homes.backend.domain.realtor.dto.request.RealtorSignupReqDto;
 import com.homes.backend.domain.realtor.dto.response.AgentDashboardStatsResDto;
 import com.homes.backend.domain.realtor.dto.response.AgentProfileResDto;
 import com.homes.backend.domain.realtor.dto.response.NearbyPropertyResDto;
+import com.homes.backend.domain.realtor.dto.response.RealtorPublicProfileResDto;
 import com.homes.backend.domain.realtor.dto.response.RealtorSignupResDto;
 import com.homes.backend.domain.realtor.entity.Agent;
 import com.homes.backend.domain.realtor.exception.RealtorErrorCode;
 import com.homes.backend.domain.realtor.repository.AgentRepository;
+import com.homes.backend.domain.review.repository.ReviewRepository;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
@@ -43,6 +45,7 @@ public class RealtorService {
     private final AgentRepository agentRepository;
     private final PropertyRepository propertyRepository;
     private final BidRepository bidRepository;
+    private final ReviewRepository reviewRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocalFileUploader localFileUploader;
@@ -199,5 +202,36 @@ public class RealtorService {
                 .toList();
 
         return new AgentDashboardStatsResDto(thisMonthCompletedDealsCount, averageFees);
+    }
+
+    /**
+     * 유저가 보는 중개사 상세 프로필 - 성사율(입찰 수락 비율) + 리뷰 평점/건수 포함
+     */
+    public RealtorPublicProfileResDto getPublicProfile(Long agentId) {
+        Agent agent = agentRepository.findById(agentId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        long totalBidCount = bidRepository.countByAgentId(agentId);
+        Double successRate = null;
+        if (totalBidCount > 0) {
+            long acceptedBidCount = bidRepository.countByAgentIdAndStatus(agentId, BidStatus.ACCEPTED);
+            successRate = acceptedBidCount * 100.0 / totalBidCount;
+        }
+
+        Long targetUserId = agent.getUser().getId();
+        Double averageReviewScore = reviewRepository.findAverageScoreByTargetUserId(targetUserId);
+        long reviewCount = reviewRepository.countByTargetUserId(targetUserId);
+
+        return RealtorPublicProfileResDto.of(agent, successRate, averageReviewScore, reviewCount);
+    }
+
+    /**
+     * agentId(중개사 프로필 ID)로 리뷰 대상이 되는 User ID를 조회 (리뷰 조회/작성 시 사용)
+     */
+    public Long resolveUserIdByAgentId(Long agentId) {
+        Agent agent = agentRepository.findById(agentId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        return agent.getUser().getId();
     }
 }
