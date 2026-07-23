@@ -1,10 +1,14 @@
 package com.homes.backend.domain.realtor.service;
 
+import com.homes.backend.domain.bid.entity.BidStatus;
+import com.homes.backend.domain.bid.repository.AgentFeeByPropertyTypeProjection;
+import com.homes.backend.domain.bid.repository.BidRepository;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.repository.PropertyDistanceProjection;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.realtor.dto.request.AgentUpdateProfileReqDto;
 import com.homes.backend.domain.realtor.dto.request.RealtorSignupReqDto;
+import com.homes.backend.domain.realtor.dto.response.AgentDashboardStatsResDto;
 import com.homes.backend.domain.realtor.dto.response.AgentProfileResDto;
 import com.homes.backend.domain.realtor.dto.response.NearbyPropertyResDto;
 import com.homes.backend.domain.realtor.dto.response.RealtorSignupResDto;
@@ -24,6 +28,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,6 +42,7 @@ public class RealtorService {
     private final UserRepository userRepository;
     private final AgentRepository agentRepository;
     private final PropertyRepository propertyRepository;
+    private final BidRepository bidRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocalFileUploader localFileUploader;
@@ -145,5 +152,52 @@ public class RealtorService {
         return nearbyProperties.stream()
                 .map(NearbyPropertyResDto::from)
                 .toList();
+    }
+
+    /**
+     * 중개사 마이페이지 - 입찰가능 매물 목록: 거래가능 매물 중 아직 내가 입찰을 넣지 않은 것만 거리순으로 조회
+     */
+    public List<NearbyPropertyResDto> getBiddableProperties(Long userId) {
+        Agent agent = agentRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        if (agent.getOfficeLatitude() == null || agent.getOfficeLongitude() == null) {
+            throw new CustomException(RealtorErrorCode.OFFICE_LOCATION_NOT_SET);
+        }
+
+        List<PropertyDistanceProjection> biddableProperties = propertyRepository.findBiddableByAgentOrderByDistance(
+                PropertyStatus.AVAILABLE,
+                agent.getOfficeLatitude(),
+                agent.getOfficeLongitude(),
+                agent.getId(),
+                NEARBY_PROPERTIES_LIMIT
+        );
+
+        return biddableProperties.stream()
+                .map(NearbyPropertyResDto::from)
+                .toList();
+    }
+
+    /**
+     * 중개사 마이페이지 통계 - 이번 달 거래 건수 + 매물 종류별 평균 확정 수수료(전체 기간)
+     */
+    public AgentDashboardStatsResDto getMyDashboardStats(Long userId) {
+        Agent agent = agentRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime nextMonthStart = monthStart.plusMonths(1);
+
+        long thisMonthCompletedDealsCount = bidRepository.countCompletedDealsInRange(
+                agent.getId(), BidStatus.ACCEPTED, PropertyStatus.COMPLETED, monthStart, nextMonthStart
+        );
+
+        List<AgentFeeByPropertyTypeProjection> feeProjections = bidRepository.findAverageFeeByPropertyType(agent.getId());
+        List<AgentDashboardStatsResDto.AverageFeeByPropertyType> averageFees = feeProjections.stream()
+                .map(p -> new AgentDashboardStatsResDto.AverageFeeByPropertyType(p.getPropertyType(), p.getAverageFee()))
+                .toList();
+
+        return new AgentDashboardStatsResDto(thisMonthCompletedDealsCount, averageFees);
     }
 }

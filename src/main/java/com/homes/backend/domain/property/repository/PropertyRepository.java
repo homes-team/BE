@@ -58,6 +58,27 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     );
 
     /**
+     * 입찰가능 매물 목록: 거래가능 매물 중, 해당 중개사가 아직 입찰을 넣지 않은 것만 거리순으로 조회
+     */
+    @Query(value = "SELECT p.id AS id, p.address AS address, p.detail_address AS detailAddress, " +
+            "p.trade_type AS tradeType, p.deposit AS deposit, p.monthly_rent AS monthlyRent, " +
+            "p.desired_brokerage_fee AS desiredBrokerageFee, " +
+            "ST_DistanceSphere(p.coordinate, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)) AS distanceInMeters " +
+            "FROM properties p " +
+            "WHERE p.status = :#{#status.name()} " +
+            "AND NOT EXISTS (SELECT 1 FROM bids b WHERE b.property_id = p.id AND b.agent_user_id = :agentId) " +
+            "ORDER BY distanceInMeters ASC " +
+            "LIMIT :limit",
+            nativeQuery = true)
+    List<PropertyDistanceProjection> findBiddableByAgentOrderByDistance(
+            @Param("status") PropertyStatus status,
+            @Param("lat") double lat,
+            @Param("lng") double lng,
+            @Param("agentId") Long agentId,
+            @Param("limit") int limit
+    );
+
+    /**
      * 찜 개수 증가
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
