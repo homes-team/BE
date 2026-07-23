@@ -21,13 +21,13 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
     @Query("SELECT COUNT(b) FROM Bid b " +
             "WHERE b.agent.id = :agentId AND b.status = :bidStatus " +
             "AND b.property.status = :propertyStatus " +
-            "AND b.property.dealCompletedAt BETWEEN :start AND :end")
+            "AND b.property.dealCompletedAt >= :start AND b.property.dealCompletedAt < :exclusiveEnd")
     long countCompletedDealsInRange(
             @Param("agentId") Long agentId,
             @Param("bidStatus") BidStatus bidStatus,
             @Param("propertyStatus") PropertyStatus propertyStatus,
             @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end
+            @Param("exclusiveEnd") LocalDateTime exclusiveEnd
     );
 
     /**

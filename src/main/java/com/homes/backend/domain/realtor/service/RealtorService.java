@@ -187,10 +187,10 @@ public class RealtorService {
 
         LocalDate today = LocalDate.now();
         LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
-        LocalDateTime monthEnd = today.withDayOfMonth(today.lengthOfMonth()).atTime(23, 59, 59);
+        LocalDateTime nextMonthStart = monthStart.plusMonths(1);
 
         long thisMonthCompletedDealsCount = bidRepository.countCompletedDealsInRange(
-                agent.getId(), BidStatus.ACCEPTED, PropertyStatus.COMPLETED, monthStart, monthEnd
+                agent.getId(), BidStatus.ACCEPTED, PropertyStatus.COMPLETED, monthStart, nextMonthStart
         );
 
         List<AgentFeeByPropertyTypeProjection> feeProjections = bidRepository.findAverageFeeByPropertyType(agent.getId());
