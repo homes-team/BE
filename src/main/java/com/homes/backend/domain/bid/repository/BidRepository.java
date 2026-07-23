@@ -38,4 +38,11 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
             "WHERE b.agent.id = :agentId AND b.finalFee IS NOT NULL " +
             "GROUP BY b.property.propertyType")
     List<AgentFeeByPropertyTypeProjection> findAverageFeeByPropertyType(@Param("agentId") Long agentId);
+
+    /**
+     * 중개사 성사율 계산 - 전체 입찰 건수 / 상태별 입찰 건수
+     */
+    long countByAgentId(Long agentId);
+
+    long countByAgentIdAndStatus(Long agentId, BidStatus status);
 }
