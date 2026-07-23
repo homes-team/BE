@@ -1,6 +1,7 @@
 package com.homes.backend.domain.realtor.controller;
 
 import com.homes.backend.domain.realtor.dto.request.AgentUpdateProfileReqDto;
+import com.homes.backend.domain.realtor.dto.response.AgentDashboardStatsResDto;
 import com.homes.backend.domain.realtor.dto.response.AgentProfileResDto;
 import com.homes.backend.domain.realtor.dto.response.NearbyPropertyResDto;
 import com.homes.backend.domain.realtor.service.RealtorService;
@@ -53,6 +54,24 @@ public class RealtorMyPageController implements RealtorMyPageControllerDocs {
         validateAgent(userPrincipal);
 
         AgentProfileResDto response = realtorService.updateMyProfile(userPrincipal.getId(), request);
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @GetMapping("/me/bids/available")
+    public ApiResponse<List<NearbyPropertyResDto>> getBiddableProperties(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        validateAgent(userPrincipal);
+
+        List<NearbyPropertyResDto> response = realtorService.getBiddableProperties(userPrincipal.getId());
+        return ApiResponse.onSuccess(response);
+    }
+
+    @Override
+    @GetMapping("/me/stats")
+    public ApiResponse<AgentDashboardStatsResDto> getMyDashboardStats(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        validateAgent(userPrincipal);
+
+        AgentDashboardStatsResDto response = realtorService.getMyDashboardStats(userPrincipal.getId());
         return ApiResponse.onSuccess(response);
     }
 

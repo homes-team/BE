@@ -1,6 +1,7 @@
 package com.homes.backend.domain.realtor.controller;
 
 import com.homes.backend.domain.realtor.dto.request.AgentUpdateProfileReqDto;
+import com.homes.backend.domain.realtor.dto.response.AgentDashboardStatsResDto;
 import com.homes.backend.domain.realtor.dto.response.AgentProfileResDto;
 import com.homes.backend.domain.realtor.dto.response.NearbyPropertyResDto;
 import com.homes.backend.global.response.ApiResponse;
@@ -39,5 +40,19 @@ public interface RealtorMyPageControllerDocs {
     ApiResponse<AgentProfileResDto> updateMyProfile(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody @Valid AgentUpdateProfileReqDto request
+    );
+
+    @Operation(summary = "입찰가능 매물 목록 조회", description = "담당 지역(사무소 기준 거리순) 매물 중, 거래가능 상태이면서 " +
+            "아직 본인이 입찰을 넣지 않은 매물만 조회합니다. 사무소 좌표를 등록하지 않은 경우 조회할 수 없습니다.")
+    @GetMapping("/me/bids/available")
+    ApiResponse<List<NearbyPropertyResDto>> getBiddableProperties(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
+
+    @Operation(summary = "중개사 마이페이지 - 대시보드 통계 조회", description = "이번 달 거래(수락 확정 + 거래완료) 건수와, " +
+            "매물 종류별 평균 확정 수수료(전체 기간)를 조회합니다.")
+    @GetMapping("/me/stats")
+    ApiResponse<AgentDashboardStatsResDto> getMyDashboardStats(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
     );
 }
