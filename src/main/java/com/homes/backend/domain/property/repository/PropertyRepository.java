@@ -12,7 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface PropertyRepository extends JpaRepository<Property, Long> {
+public interface PropertyRepository extends JpaRepository<Property, Long>, PropertyRepositoryCustom {
     @Query("SELECT DISTINCT p FROM Property p LEFT JOIN p.tags t " +
             "WHERE function('ST_Contains', :boundingBox, p.coordinate) = true " +
             "AND (:tradeType IS NULL OR p.tradeType = :tradeType) " +
