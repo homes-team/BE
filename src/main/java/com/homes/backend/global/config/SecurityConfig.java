@@ -116,11 +116,7 @@ public class SecurityConfig {
         errorDetails.put("isSuccess", false);
         errorDetails.put("code", errorCode.getCode());
         errorDetails.put("message", errorCode.getMessage());
-        
-        try { // JSON으로 변환하여 화면에 출력
-            response.getWriter().write(objectMapper.writeValueAsString(errorDetails));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+        response.getWriter().write(objectMapper.writeValueAsString(errorDetails));
     }
 }

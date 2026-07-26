@@ -19,17 +19,13 @@ public class PropertyRecommendationService {
     private final PropertyRepository propertyRepository;
     private final RecentViewRepository recentViewRepository; // 2. 의존성 주입 추가
 
-    public List<PropertyListRespDto> getRecommendations(Long userId) {
+    public List<PropertyListRespDto> getRecommendations(Long userId, Double minPrice, Double maxPrice, String preferredRegion) {
         /**
          * 비로그인 유저 허용 X
          */
         if (userId == null) {
             throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
         }
-
-        Double minPrice = null;
-        Double maxPrice = null;
-        String preferredRegion = null;
 
         // 유저의 최근 본 방 기록(Top 20)을 조회하여 추출
         List<Long> recentViewedIds = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId)

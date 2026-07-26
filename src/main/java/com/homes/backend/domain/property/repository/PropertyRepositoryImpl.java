@@ -61,6 +61,7 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
                         // 필수 조건: 거래 가능하며 허위 매물이 아닌 것
                         property.status.eq(PropertyStatus.AVAILABLE),
                         property.isSuspicious.eq(false),
+                        property.reportCount.eq(0),
 
                         // 동적 조건: 값이 null이면 무시됨
                         priceBetween(minPrice, maxPrice),
