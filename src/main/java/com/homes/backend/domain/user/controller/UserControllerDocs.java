@@ -103,7 +103,7 @@ public interface UserControllerDocs {
             @RequestBody @Valid AdminIdentityVerificationSyncReqDto request
     );
 
-    @Operation(summary = "마이페이지 회원정보 조회", description = "로그인한 유저 본인의 회원정보(이메일, 실명, 닉네임, 전화번호, 실명 인증 여부, 이용 목적, 평판 점수 등)를 조회합니다.")
+    @Operation(summary = "마이페이지 회원정보 조회", description = "로그인한 유저 본인의 회원정보(이메일, 실명, 닉네임, 전화번호, 실명 인증 여부, 이용 목적 등)를 조회합니다.")
     @GetMapping("/me")
     ApiResponse<UserProfileResDto> getMyProfile(
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal

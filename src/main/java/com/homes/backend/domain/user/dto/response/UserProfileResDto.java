@@ -10,8 +10,7 @@ public record UserProfileResDto(
         String phone,
         String usagePurpose,
         boolean isIdentityVerified,
-        String role,
-        Float reputationScore
+        String role
 ) {
     public static UserProfileResDto from(User user) {
         return new UserProfileResDto(
@@ -22,8 +21,7 @@ public record UserProfileResDto(
                 user.getPhone(),
                 user.getUsagePurpose(),
                 user.isIdentityVerified(),
-                user.getRole(),
-                user.getReputationScore()
+                user.getRole()
         );
     }
 }

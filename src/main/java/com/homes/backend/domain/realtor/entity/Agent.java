@@ -54,6 +54,10 @@ public class Agent extends BaseEntity {
     @Column(name = "office_longitude") // 중개사무소 경도
     private Double officeLongitude;
 
+    @Builder.Default
+    @Column(name = "reputation_score", nullable = false) // 평판 점수(매너온도 방식, 기본값 36.5)
+    private Float reputationScore = 36.5f;
+
     /**
      * 마이페이지 회원정보(사무소 정보) 수정.
      * 사업자등록번호/인증서류/인증여부는 관리자 승인과 직결되므로 여기서 다루지 않는다.
@@ -63,5 +67,13 @@ public class Agent extends BaseEntity {
         this.officeAddress = officeAddress;
         this.officeLatitude = officeLatitude;
         this.officeLongitude = officeLongitude;
+    }
+
+    /**
+     * 리뷰 점수(0.0~5.0)를 매너온도에 반영. 중립점(2.5)보다 높으면 오르고 낮으면 내려간다.
+     */
+    public void reflectReviewScore(float reviewScore) {
+        float delta = (reviewScore - 2.5f) * 0.1f;
+        this.reputationScore = this.reputationScore + delta;
     }
 }

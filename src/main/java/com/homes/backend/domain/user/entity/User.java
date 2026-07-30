@@ -53,10 +53,6 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
     @Column(name = "refresh_token", length = 255) // JWT 리프레시 토큰 (NULL 가능)
     private String refreshToken;
 
-    @Builder.Default
-    @Column(name = "reputation_score", nullable = false) // 평판 점수 (기본값 36.5)
-    private Float reputationScore = 36.5f;
-
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }

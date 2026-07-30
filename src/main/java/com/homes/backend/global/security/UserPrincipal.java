@@ -2,9 +2,10 @@ package com.homes.backend.global.security;
 
 import com.homes.backend.domain.user.entity.User;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 public class UserPrincipal implements UserDetails {
 
@@ -32,8 +33,8 @@ public class UserPrincipal implements UserDetails {
     // 아래 메서드들은 스프링 시큐리티가 내부적으로 검증할 때 쓰는 필수 규칙들
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 현재 일반 유저 권한만 있으므로 빈 리스트나 기본 권한 줌
-        return Collections.emptyList();
+        // "ROLE_" 접두사는 스프링 시큐리티의 hasRole() 표현식이 요구하는 규칙
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     @Override
