@@ -18,6 +18,7 @@ import com.homes.backend.global.security.TokenDto;
 import com.homes.backend.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -162,18 +163,12 @@ public class UserController implements UserControllerDocs {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/me/verification/callback")
     public ApiResponse<IdentityVerificationResDto> forceSyncIdentityVerification(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody @Valid AdminIdentityVerificationSyncReqDto request
     ) {
-        if (userPrincipal == null) {
-            throw new CustomException(GlobalErrorCode.UNAUTHORIZED);
-        }
-        if (!"ADMIN".equals(userPrincipal.getRole())) {
-            throw new CustomException(GlobalErrorCode.FORBIDDEN);
-        }
-
         IdentityVerificationResDto response = userService.forceSyncIdentityVerification(request);
         return ApiResponse.onSuccess(response);
     }

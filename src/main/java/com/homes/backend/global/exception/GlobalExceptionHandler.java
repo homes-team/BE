@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -28,6 +29,17 @@ public class GlobalExceptionHandler {
         log.warn("CustomException: {}", e.getMessage());
         return ResponseEntity.status(e.getErrorCode().getHttpStatus())
                 .body(ApiResponse.onFailure(e.getErrorCode()));
+    }
+
+    /**
+     * @PreAuthorize 등 메서드 단위 권한 체크 실패.
+     * 컨트롤러 핸들러 호출 중 발생하는 예외라 Spring MVC가 SecurityConfig의 accessDeniedHandler보다 먼저 처리하므로 여기서 잡아야 함.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException e) {
+        log.warn("AccessDeniedException: {}", e.getMessage());
+        return ResponseEntity.status(GlobalErrorCode.FORBIDDEN.getHttpStatus())
+                .body(ApiResponse.onFailure(GlobalErrorCode.FORBIDDEN));
     }
 
     /**

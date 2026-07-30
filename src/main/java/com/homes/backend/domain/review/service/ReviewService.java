@@ -5,6 +5,8 @@ import com.homes.backend.domain.review.dto.response.ReviewListRespDto;
 import com.homes.backend.domain.review.entity.Review;
 import com.homes.backend.domain.review.exception.ReviewErrorCode;
 import com.homes.backend.domain.review.repository.ReviewRepository;
+import com.homes.backend.domain.realtor.entity.Agent;
+import com.homes.backend.domain.realtor.repository.AgentRepository;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
@@ -23,6 +25,7 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final AgentRepository agentRepository;
 
     /**
      * 특정 대상(중개사 등)에 대한 리뷰 작성
@@ -54,6 +57,10 @@ public class ReviewService {
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ReviewErrorCode.ALREADY_REVIEWED);
         }
+
+        agentRepository.findByUserId(targetUserId)
+                .ifPresent(agent -> agentRepository.addToReputationScore(
+                        agent.getId(), Agent.calculateReputationDelta(request.score())));
     }
 
     /**
