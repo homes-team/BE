@@ -59,7 +59,8 @@ public class ReviewService {
         }
 
         agentRepository.findByUserId(targetUserId)
-                .ifPresent(agent -> agent.reflectReviewScore(request.score()));
+                .ifPresent(agent -> agentRepository.addToReputationScore(
+                        agent.getId(), Agent.calculateReputationDelta(request.score())));
     }
 
     /**
