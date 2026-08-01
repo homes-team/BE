@@ -133,6 +133,13 @@ public class Property extends BaseEntity {
     }
 
     /**
+     * 중개사 매칭 완료 처리 (집주인이 제안을 수락했을 때)
+     */
+    public void matchDeal() {
+        this.status = PropertyStatus.MATCHED;
+    }
+
+    /**
      * 매물 정보 수정
      */
     public void update(String title, String description, String address, String detailAddress,

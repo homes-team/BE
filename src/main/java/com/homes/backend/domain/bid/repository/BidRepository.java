@@ -5,6 +5,7 @@ import com.homes.backend.domain.bid.entity.BidStatus;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -14,6 +15,11 @@ import java.util.List;
 public interface BidRepository extends JpaRepository<Bid, Long> {
     @EntityGraph(attributePaths = {"agent"})
     List<Bid> findAllByPropertyIdOrderByCreatedAtDesc(Long propertyId); // 특정 매물에 달린 입찰 목록 최신순으로 조회
+
+    /**
+     * 해당 매물에 해당 중개사의 제안서가 존재하는지 검사
+     */
+    boolean existsByPropertyIdAndAgentId(Long propertyId, Long agentId);
 
     /**
      * 중개사 마이페이지 통계 - 이번 달 거래(수락 확정 + 거래완료) 건수
@@ -45,4 +51,11 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
     long countByAgentId(Long agentId);
 
     long countByAgentIdAndStatus(Long agentId, BidStatus status);
+
+    /**
+     * 매칭 완료 되지 못한 입찰 제안서 거절로 상태 변환
+     */
+    @Modifying
+    @Query("UPDATE Bid b SET b.status = 'REJECTED' WHERE b.property.id = :propertyId AND b.id != :acceptedBidId AND b.status = 'PENDING'")
+    void rejectOtherPendingBids(@Param("propertyId") Long propertyId, @Param("acceptedBidId") Long acceptedBidId);
 }
