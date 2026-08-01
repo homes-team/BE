@@ -16,6 +16,11 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
     List<Bid> findAllByPropertyIdOrderByCreatedAtDesc(Long propertyId); // 특정 매물에 달린 입찰 목록 최신순으로 조회
 
     /**
+     * 해당 매물에 해당 중개사의 제안서가 존재하는지 검사
+     */
+    boolean existsByPropertyIdAndAgentId(Long propertyId, Long agentId);
+
+    /**
      * 중개사 마이페이지 통계 - 이번 달 거래(수락 확정 + 거래완료) 건수
      */
     @Query("SELECT COUNT(b) FROM Bid b " +

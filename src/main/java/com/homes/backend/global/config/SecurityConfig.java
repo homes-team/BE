@@ -110,7 +110,8 @@ public class SecurityConfig {
                                 org.springframework.http.HttpMethod.GET,
                                 "/properties",
                                 "/properties/{propertyId}",
-                                "/properties/map"
+                                "/properties/map",
+                                "/properties/surge-rankings"
                         ).permitAll()
 
                         // Swagger 관련 프리패스 주소 (이건 기존 yml 설정에 맞게 유지)
