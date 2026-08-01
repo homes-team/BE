@@ -42,6 +42,10 @@ public class BidService {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
+        if (property.getStatus() != PropertyStatus.AVAILABLE) {
+            throw new CustomException(BidErrorCode.PROPERTY_ALREADY_MATCHED);
+        }
+
         // 입찰하는 중개사(Agent) 조회
         Agent agent = agentRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
@@ -110,10 +114,17 @@ public class BidService {
      */
     @Transactional
     public void acceptBid(Long propertyId, Long bidId, Long userId) {
-        Property property = getPropertyAndValidateOwnership(propertyId, userId);
+        // 동시성 방어를 위해 '비관적 락'이 걸린 메서드로 매물을 가져옵니다.
+        Property property = propertyRepository.findByIdWithPessimisticLock(propertyId)
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
+
+        // 집주인 본인이 맞는지 권한 검증을 직접 해줍니다.
+        if (!property.getUser().getId().equals(userId)) {
+            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+        }
 
         // 이 매물이 이미 매칭 완료된 상태라면?
-        if (property.getStatus() == PropertyStatus.MATCHED) {
+        if (property.getStatus() != PropertyStatus.AVAILABLE) {
             throw new CustomException(BidErrorCode.PROPERTY_ALREADY_MATCHED);
         }
 
@@ -139,6 +150,9 @@ public class BidService {
 
         // 매물 상태도 '매칭 완료'로 변경
         property.matchDeal();
+
+        // 선택받지 못한 다른 입찰서들은 모두 거절 처리
+        bidRepository.rejectOtherPendingBids(propertyId, bidId);
 
         // TODO: 채팅방 생성 이벤트 로직
 
@@ -181,6 +195,10 @@ public class BidService {
             if (!bid.getAgent().getUser().getId().equals(userId)) {
                 throw new CustomException(BidErrorCode.UNAUTHORIZED_BID_ACCESS);
             }
+        } else if ("ADMIN".equals(role)) {
+            // 관리자(ADMIN): 소유권 검증 없이 그냥 패스
+        } else { // USER도 AGENT도 아닌 이상한 값이 들어오면 무조건 튕겨냄
+            throw new CustomException(BidErrorCode.UNAUTHORIZED_BID_ACCESS);
         }
 
         return bid;

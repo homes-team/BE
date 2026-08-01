@@ -7,6 +7,7 @@ import com.homes.backend.domain.bid.dto.response.NegotiationListResDto;
 import com.homes.backend.domain.bid.service.BidService;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.UserPrincipal;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,7 +27,7 @@ public class BidController implements BidControllerDocs{
     @PostMapping
     public ApiResponse<Void> createBid(
             @PathVariable Long propertyId,
-            @RequestBody BidCreateReqDto reqDto,
+            @Valid @RequestBody BidCreateReqDto reqDto,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         bidService.createBid(propertyId, reqDto, userPrincipal.getId());
@@ -62,7 +63,7 @@ public class BidController implements BidControllerDocs{
     public ApiResponse<Void> createNegotiation(
             @PathVariable Long propertyId,
             @PathVariable Long bidId,
-            @RequestBody NegotiationReqDto reqDto,
+            @Valid @RequestBody NegotiationReqDto reqDto,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         bidService.createNegotiation(propertyId, bidId, reqDto, userPrincipal.getId(), userPrincipal.getRole());

@@ -4,13 +4,16 @@ import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
+import jakarta.persistence.LockModeType;
 import org.locationtech.jts.geom.Polygon;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PropertyRepository extends JpaRepository<Property, Long>, PropertyRepositoryCustom {
     @Query("SELECT DISTINCT p FROM Property p LEFT JOIN p.tags t " +
@@ -102,4 +105,11 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, Prope
             "    p.isSuspicious = (CASE WHEN p.reportCount + 1 >= 5 THEN true ELSE p.isSuspicious END) " +
             "WHERE p.id = :propertyId")
     void increaseReportCountAndCheckSuspicious(@Param("propertyId") Long propertyId);
+
+    /**
+     * 중개사 매칭(acceptBid)에서 동시 수락 막는 잠금
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Property p WHERE p.id = :id")
+    Optional<Property> findByIdWithPessimisticLock(@Param("id") Long id);
 }
