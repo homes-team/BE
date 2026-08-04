@@ -105,6 +105,11 @@ public class BidService {
             throw new CustomException(BidErrorCode.BID_ALREADY_ACCEPTED);
         }
 
+        // 취소/거절되어 이미 끝난 제안서에는 역제안을 보낼 수 없음 (협상은 PENDING 상태에서만 의미가 있음)
+        if (bid.getStatus() != BidStatus.PENDING) {
+            throw new CustomException(BidErrorCode.BID_NOT_PENDING);
+        }
+
         Negotiation negotiation = Negotiation.builder()
                 .bid(bid)
                 .senderRole(role) // "USER" or "AGENT"
@@ -174,6 +179,10 @@ public class BidService {
      */
     @Transactional
     public void cancelBid(Long propertyId, Long bidId, Long userId, String role) {
+        // 동시성 방어: complete와 cancel이 동시에 들어와도 한쪽만 처리되도록 매물에 비관적 락을 건다
+        Property property = propertyRepository.findByIdWithPessimisticLock(propertyId)
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
+
         Bid bid = validateAccessRight(propertyId, bidId, userId, role);
 
         if (bid.getStatus() != BidStatus.ACCEPTED) {
@@ -181,12 +190,12 @@ public class BidService {
         }
 
         // Bid.status는 완료된 거래도 ACCEPTED로 유지되므로, 이미 거래완료(COMPLETED)된 매물은 취소 대상에서 제외해야 함
-        if (bid.getProperty().getStatus() != PropertyStatus.MATCHED) {
+        if (property.getStatus() != PropertyStatus.MATCHED) {
             throw new CustomException(BidErrorCode.PROPERTY_NOT_MATCHED);
         }
 
         bid.cancelBid();
-        bid.getProperty().cancelMatch();
+        property.cancelMatch();
     }
 
     /**
@@ -194,7 +203,13 @@ public class BidService {
      */
     @Transactional
     public void completeBid(Long propertyId, Long bidId, Long userId) {
-        Property property = getPropertyAndValidateOwnership(propertyId, userId);
+        // 동시성 방어: complete와 cancel이 동시에 들어와도 한쪽만 처리되도록 매물에 비관적 락을 건다
+        Property property = propertyRepository.findByIdWithPessimisticLock(propertyId)
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
+
+        if (!property.getUser().getId().equals(userId)) {
+            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+        }
 
         Bid bid = bidRepository.findById(bidId)
                 .orElseThrow(() -> new CustomException(BidErrorCode.BID_NOT_FOUND));

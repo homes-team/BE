@@ -2,6 +2,7 @@ package com.homes.backend.domain.chat.repository;
 
 import com.homes.backend.domain.chat.entity.ChatRoom;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -23,4 +24,15 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             "(r.user.id = :userId AND r.userLeft = false) OR " +
             "(r.agentUser.id = :userId AND r.agentLeft = false)")
     List<ChatRoom> findActiveRoomsByParticipantId(@Param("userId") Long userId);
+
+    /**
+     * 나가기 처리 - 컬럼 단위 원자적 UPDATE. 두 참여자가 동시에 나가도 서로 다른 컬럼을 건드리므로 lost update가 없다.
+     */
+    @Modifying
+    @Query("UPDATE ChatRoom r SET r.userLeft = true WHERE r.id = :roomId")
+    void markUserLeft(@Param("roomId") Long roomId);
+
+    @Modifying
+    @Query("UPDATE ChatRoom r SET r.agentLeft = true WHERE r.id = :roomId")
+    void markAgentLeft(@Param("roomId") Long roomId);
 }

@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,7 +21,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "chat_rooms")
+@Table(name = "chat_rooms", uniqueConstraints = @UniqueConstraint(
+        name = "uk_chat_room_participants", columnNames = {"property_id", "user_id", "agent_user_id"}))
 public class ChatRoom extends BaseEntity {
 
     @Id
@@ -62,14 +64,10 @@ public class ChatRoom extends BaseEntity {
     }
 
     /**
-     * callerId가 어느 쪽인지 판별해서 그 쪽만 나간 상태로 표시 (행 삭제 X, 상대방 메시지 이력 보존)
+     * callerId가 회원 쪽인지 중개사 쪽인지 판별 (실제 나가기 처리는 컬럼 단위 원자적 UPDATE로 수행 - ChatRoomRepository 참고)
      */
-    public void leave(Long callerId) {
-        if (this.user.getId().equals(callerId)) {
-            this.userLeft = true;
-        } else {
-            this.agentLeft = true;
-        }
+    public boolean isUserSide(Long callerId) {
+        return this.user.getId().equals(callerId);
     }
 
     public boolean isMember(Long userId) {

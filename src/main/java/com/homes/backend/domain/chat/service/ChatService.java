@@ -15,6 +15,7 @@ import com.homes.backend.domain.realtor.repository.AgentRepository;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.global.exception.CustomException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,13 +61,29 @@ public class ChatService {
                     room.reopen();
                     return room;
                 })
-                .orElseGet(() -> chatRoomRepository.save(
-                        ChatRoom.builder()
-                                .property(property)
-                                .user(user)
-                                .agentUser(agentUser)
-                                .build()
-                ));
+                .orElseGet(() -> saveNewRoomOrReopenExisting(property, user, agentUser));
+    }
+
+    /**
+     * 조회 후 저장 사이의 경합(같은 조합의 방 생성 요청이 동시에 들어오는 경우)으로 유니크 제약을 위반하면,
+     * 그사이 다른 트랜잭션이 만든 기존 방을 다시 조회해 재오픈한다 (중복 방 생성 방지)
+     */
+    private ChatRoom saveNewRoomOrReopenExisting(Property property, User user, User agentUser) {
+        try {
+            return chatRoomRepository.save(
+                    ChatRoom.builder()
+                            .property(property)
+                            .user(user)
+                            .agentUser(agentUser)
+                            .build()
+            );
+        } catch (DataIntegrityViolationException e) {
+            ChatRoom room = chatRoomRepository.findByPropertyIdAndUserIdAndAgentUserId(
+                            property.getId(), user.getId(), agentUser.getId())
+                    .orElseThrow(() -> e);
+            room.reopen();
+            return room;
+        }
     }
 
     /**
@@ -84,7 +101,7 @@ public class ChatService {
     public List<ChatMessageListResDto> getMessages(Long chatId, Long callerId) {
         ChatRoom room = getRoomAndValidateMembership(chatId, callerId);
 
-        return chatMessageRepository.findAllByRoomIdOrderByCreatedAtAsc(room.getId()).stream()
+        return chatMessageRepository.findAllByRoomIdOrderByCreatedAtAscIdAsc(room.getId()).stream()
                 .map(ChatMessageListResDto::from)
                 .toList();
     }
@@ -95,7 +112,12 @@ public class ChatService {
     @Transactional
     public void leaveChatRoom(Long chatId, Long callerId) {
         ChatRoom room = getRoomAndValidateMembership(chatId, callerId);
-        room.leave(callerId);
+
+        if (room.isUserSide(callerId)) {
+            chatRoomRepository.markUserLeft(chatId);
+        } else {
+            chatRoomRepository.markAgentLeft(chatId);
+        }
     }
 
     private ChatRoom getRoomAndValidateMembership(Long chatId, Long callerId) {
