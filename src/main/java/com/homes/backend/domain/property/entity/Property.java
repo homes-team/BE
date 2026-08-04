@@ -140,6 +140,13 @@ public class Property extends BaseEntity {
     }
 
     /**
+     * 매칭 취소 - 거래가 불발되어 다시 입찰 가능 상태로 되돌림
+     */
+    public void cancelMatch() {
+        this.status = PropertyStatus.AVAILABLE;
+    }
+
+    /**
      * 매물 정보 수정
      */
     public void update(String title, String description, String address, String detailAddress,
