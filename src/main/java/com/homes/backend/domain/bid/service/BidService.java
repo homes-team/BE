@@ -10,6 +10,7 @@ import com.homes.backend.domain.bid.entity.Negotiation;
 import com.homes.backend.domain.bid.exception.BidErrorCode;
 import com.homes.backend.domain.bid.repository.BidRepository;
 import com.homes.backend.domain.bid.repository.NegotiationRepository;
+import com.homes.backend.domain.chat.service.ChatService;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
@@ -33,6 +34,7 @@ public class BidService {
     private final PropertyRepository propertyRepository;
     private final AgentRepository agentRepository;
     private final NegotiationRepository negotiationRepository;
+    private final ChatService chatService;
 
     /**
      * 중개사가 수수료 역제안 제시
@@ -50,8 +52,10 @@ public class BidService {
         Agent agent = agentRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(GlobalErrorCode.NOT_FOUND));
 
-        // 이미 해당 매물에 입찰서를 제출했는지 검사
-        if (bidRepository.existsByPropertyIdAndAgentId(propertyId, agent.getId())) {
+        // 이미 해당 매물에 진행 중인(PENDING/ACCEPTED) 입찰서를 제출했는지 검사
+        // 취소(CANCELLED)/거절(REJECTED)된 과거 입찰서는 재입찰을 막지 않는다
+        if (bidRepository.existsByPropertyIdAndAgentIdAndStatusIn(
+                propertyId, agent.getId(), List.of(BidStatus.PENDING, BidStatus.ACCEPTED))) {
             throw new CustomException(BidErrorCode.ALREADY_BIDDED);
         }
 
@@ -71,7 +75,9 @@ public class BidService {
     public List<BidListRespDto> getPropertyBids(Long propertyId, Long userId) {
         Property property = getPropertyAndValidateOwnership(propertyId, userId);
 
-        return bidRepository.findAllByPropertyIdOrderByCreatedAtDesc(propertyId).stream()
+        return bidRepository.findAllByPropertyIdAndStatusInOrderByCreatedAtDesc(
+                        propertyId, List.of(BidStatus.PENDING, BidStatus.ACCEPTED))
+                .stream()
                 .map(BidListRespDto::from)
                 .toList();
     }
@@ -140,6 +146,11 @@ public class BidService {
             throw new CustomException(BidErrorCode.BID_ALREADY_ACCEPTED);
         }
 
+        // 취소/거절되어 이미 끝난 제안서를 다시 살려서 수락하는 것을 방지
+        if (bid.getStatus() != BidStatus.PENDING) {
+            throw new CustomException(BidErrorCode.BID_NOT_PENDING);
+        }
+
         // 최종 확정 수수료 결정 (가장 마지막 협상 금액, 없으면 최초 입찰 금액)
         List<Negotiation> negotiations = negotiationRepository.findAllByBidIdOrderByCreatedAtAsc(bidId);
         Double finalFee = negotiations.isEmpty() ?
@@ -154,8 +165,55 @@ public class BidService {
         // 선택받지 못한 다른 입찰서들은 모두 거절 처리
         bidRepository.rejectOtherPendingBids(propertyId, bidId);
 
-        // TODO: 채팅방 생성 이벤트 로직
+        // 매칭 확정된 전속 중개사와의 1:1 채팅방 생성/재오픈
+        chatService.createOrReopenRoom(property, property.getUser(), bid.getAgent().getUser());
+    }
 
+    /**
+     * 매칭 취소 - 집주인 또는 매칭된 중개사 누구든 요청 가능 (채팅 중 거래가 불발될 수 있으므로)
+     */
+    @Transactional
+    public void cancelBid(Long propertyId, Long bidId, Long userId, String role) {
+        Bid bid = validateAccessRight(propertyId, bidId, userId, role);
+
+        if (bid.getStatus() != BidStatus.ACCEPTED) {
+            throw new CustomException(BidErrorCode.BID_NOT_ACCEPTED);
+        }
+
+        // Bid.status는 완료된 거래도 ACCEPTED로 유지되므로, 이미 거래완료(COMPLETED)된 매물은 취소 대상에서 제외해야 함
+        if (bid.getProperty().getStatus() != PropertyStatus.MATCHED) {
+            throw new CustomException(BidErrorCode.PROPERTY_NOT_MATCHED);
+        }
+
+        bid.cancelBid();
+        bid.getProperty().cancelMatch();
+    }
+
+    /**
+     * 거래완료 처리 - 매칭 대금을 지불하는 쪽인 집주인만 확정 가능 (중개사가 스스로 완료 처리하면 성과 지표를 조작할 수 있으므로)
+     */
+    @Transactional
+    public void completeBid(Long propertyId, Long bidId, Long userId) {
+        Property property = getPropertyAndValidateOwnership(propertyId, userId);
+
+        Bid bid = bidRepository.findById(bidId)
+                .orElseThrow(() -> new CustomException(BidErrorCode.BID_NOT_FOUND));
+
+        if (!bid.getProperty().getId().equals(propertyId)) {
+            throw new CustomException(BidErrorCode.BID_PROPERTY_MISMATCH);
+        }
+
+        if (bid.getStatus() != BidStatus.ACCEPTED) {
+            throw new CustomException(BidErrorCode.BID_NOT_ACCEPTED);
+        }
+
+        if (property.getStatus() != PropertyStatus.MATCHED) {
+            throw new CustomException(BidErrorCode.PROPERTY_NOT_MATCHED);
+        }
+
+        // Bid.status는 ACCEPTED로 유지한다 - 통계(countCompletedDealsInRange)가
+        // "Bid.status=ACCEPTED AND Property.status=COMPLETED" 조합으로 완료 건수를 세기 때문
+        property.completeDeal();
     }
 
     // ================= [ 공통 검증 로직 ] =================

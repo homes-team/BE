@@ -13,13 +13,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BidRepository extends JpaRepository<Bid, Long> {
+    // 특정 매물에 달린 입찰 목록 중 "집주인이 지금 고를 수 있는" 진행 중인(PENDING/ACCEPTED) 것만 최신순으로 조회
+    // 취소/거절된 이력은 이 목록에서 제외한다 (같은 중개사가 재입찰하면 옛 취소 건과 새 대기 건이 중복으로 보이는 걸 방지)
     @EntityGraph(attributePaths = {"agent"})
-    List<Bid> findAllByPropertyIdOrderByCreatedAtDesc(Long propertyId); // 특정 매물에 달린 입찰 목록 최신순으로 조회
+    List<Bid> findAllByPropertyIdAndStatusInOrderByCreatedAtDesc(Long propertyId, List<BidStatus> statuses);
 
     /**
-     * 해당 매물에 해당 중개사의 제안서가 존재하는지 검사
+     * 해당 매물에 해당 중개사의 "진행 중인"(취소/거절되지 않은) 제안서가 존재하는지 검사
      */
-    boolean existsByPropertyIdAndAgentId(Long propertyId, Long agentId);
+    boolean existsByPropertyIdAndAgentIdAndStatusIn(Long propertyId, Long agentId, List<BidStatus> statuses);
 
     /**
      * 중개사 마이페이지 통계 - 이번 달 거래(수락 확정 + 거래완료) 건수

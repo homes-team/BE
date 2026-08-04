@@ -1,0 +1,111 @@
+package com.homes.backend.domain.chat.service;
+
+import com.homes.backend.domain.chat.dto.response.ChatMessageListResDto;
+import com.homes.backend.domain.chat.dto.response.ChatRoomResDto;
+import com.homes.backend.domain.chat.entity.ChatRoom;
+import com.homes.backend.domain.chat.exception.ChatErrorCode;
+import com.homes.backend.domain.chat.repository.ChatMessageRepository;
+import com.homes.backend.domain.chat.repository.ChatRoomRepository;
+import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.exception.PropertyErrorCode;
+import com.homes.backend.domain.property.repository.PropertyRepository;
+import com.homes.backend.domain.realtor.entity.Agent;
+import com.homes.backend.domain.realtor.exception.RealtorErrorCode;
+import com.homes.backend.domain.realtor.repository.AgentRepository;
+import com.homes.backend.domain.user.entity.User;
+import com.homes.backend.global.exception.CustomException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ChatService {
+
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final PropertyRepository propertyRepository;
+    private final AgentRepository agentRepository;
+
+    /**
+     * 유저가 특정 매물에 대해 특정 중개사와의 채팅방을 직접 열기 (버튼 클릭 흐름)
+     */
+    @Transactional
+    public ChatRoomResDto createChatRoom(Long propertyId, Long realtorId, Long callerId) {
+        Property property = propertyRepository.findById(propertyId)
+                .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
+
+        if (!property.getUser().getId().equals(callerId)) {
+            throw new CustomException(PropertyErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        Agent agent = agentRepository.findById(realtorId)
+                .orElseThrow(() -> new CustomException(RealtorErrorCode.AGENT_NOT_FOUND));
+
+        ChatRoom room = createOrReopenRoom(property, property.getUser(), agent.getUser());
+        return ChatRoomResDto.from(room);
+    }
+
+    /**
+     * (매물, 회원, 중개사) 조합의 채팅방을 생성하거나, 이미 있으면 재오픈한다.
+     * 매칭 확정(Bid accept) 시 자동 트리거되는 경로에서도 재사용된다.
+     */
+    @Transactional
+    public ChatRoom createOrReopenRoom(Property property, User user, User agentUser) {
+        return chatRoomRepository.findByPropertyIdAndUserIdAndAgentUserId(property.getId(), user.getId(), agentUser.getId())
+                .map(room -> {
+                    room.reopen();
+                    return room;
+                })
+                .orElseGet(() -> chatRoomRepository.save(
+                        ChatRoom.builder()
+                                .property(property)
+                                .user(user)
+                                .agentUser(agentUser)
+                                .build()
+                ));
+    }
+
+    /**
+     * 내 채팅방 목록 (회원/중개사 어느 쪽이든 조회 가능)
+     */
+    public List<ChatRoomResDto> getMyChatRooms(Long userId) {
+        return chatRoomRepository.findActiveRoomsByParticipantId(userId).stream()
+                .map(ChatRoomResDto::from)
+                .toList();
+    }
+
+    /**
+     * 특정 채팅방의 과거 메시지 내역 조회
+     */
+    public List<ChatMessageListResDto> getMessages(Long chatId, Long callerId) {
+        ChatRoom room = getRoomAndValidateMembership(chatId, callerId);
+
+        return chatMessageRepository.findAllByRoomIdOrderByCreatedAtAsc(room.getId()).stream()
+                .map(ChatMessageListResDto::from)
+                .toList();
+    }
+
+    /**
+     * 채팅방 나가기 - 행을 지우지 않고 내 쪽 플래그만 true로 표시 (상대방 이력 보존)
+     */
+    @Transactional
+    public void leaveChatRoom(Long chatId, Long callerId) {
+        ChatRoom room = getRoomAndValidateMembership(chatId, callerId);
+        room.leave(callerId);
+    }
+
+    private ChatRoom getRoomAndValidateMembership(Long chatId, Long callerId) {
+        ChatRoom room = chatRoomRepository.findById(chatId)
+                .orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+
+        if (!room.isMember(callerId)) {
+            throw new CustomException(ChatErrorCode.NOT_CHAT_MEMBER);
+        }
+
+        return room;
+    }
+}

@@ -55,4 +55,20 @@ public interface BidControllerDocs {
             @PathVariable Long bidId,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
     );
+
+    @Operation(summary = "매칭 취소", description = "매칭 확정된 제안서를 취소하고 매물을 다시 입찰 가능(AVAILABLE) 상태로 되돌립니다. " +
+            "채팅 중 거래가 불발될 수 있으므로 집주인 또는 매칭된 중개사 둘 다 요청할 수 있습니다.")
+    ApiResponse<Void> cancelBid(
+            @PathVariable Long propertyId,
+            @PathVariable Long bidId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
+
+    @Operation(summary = "거래완료 처리", description = "매칭 확정된 거래를 최종 완료 처리합니다. " +
+            "중개사가 스스로 완료 처리하면 본인의 성사율/통계를 조작할 수 있으므로 매물을 등록한 집주인만 요청할 수 있습니다.")
+    ApiResponse<Void> completeBid(
+            @PathVariable Long propertyId,
+            @PathVariable Long bidId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal userPrincipal
+    );
 }

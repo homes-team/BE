@@ -18,7 +18,13 @@ public enum BidErrorCode implements BaseErrorCode {
 
     BID_ALREADY_ACCEPTED("BID400_3", "이미 매칭이 완료된 제안서입니다.", HttpStatus.BAD_REQUEST),
 
-    PROPERTY_ALREADY_MATCHED("BID400_4", "이미 다른 중개사와 거래가 확정된 매물입니다.", HttpStatus.BAD_REQUEST);
+    PROPERTY_ALREADY_MATCHED("BID400_4", "이미 다른 중개사와 거래가 확정된 매물입니다.", HttpStatus.BAD_REQUEST),
+
+    BID_NOT_ACCEPTED("BID400_5", "매칭 확정된 제안서만 취소하거나 완료 처리할 수 있습니다.", HttpStatus.BAD_REQUEST),
+
+    PROPERTY_NOT_MATCHED("BID400_6", "매칭 확정(MATCHED) 상태의 매물에서만 가능한 작업입니다.", HttpStatus.BAD_REQUEST),
+
+    BID_NOT_PENDING("BID400_7", "대기(PENDING) 중인 제안서만 수락할 수 있습니다. 이미 취소되었거나 거절된 제안서입니다.", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;

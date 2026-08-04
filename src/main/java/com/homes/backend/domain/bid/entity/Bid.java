@@ -45,6 +45,10 @@ public class Bid extends BaseEntity {
         this.finalFee = finalFee; // 최종 수수료를 저장
     }
 
+    public void cancelBid() {
+        this.status = BidStatus.CANCELLED;
+    }
+
     @Builder
     public Bid(Double proposedFee, String content, Agent agent, Property property) {
         this.proposedFee = proposedFee;
