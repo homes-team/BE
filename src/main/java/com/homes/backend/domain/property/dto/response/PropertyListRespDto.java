@@ -1,9 +1,6 @@
 package com.homes.backend.domain.property.dto.response;
 
-import com.homes.backend.domain.property.entity.Property;
-import com.homes.backend.domain.property.entity.PropertyImage;
-import com.homes.backend.domain.property.entity.PropertyType;
-import com.homes.backend.domain.property.entity.TradeType;
+import com.homes.backend.domain.property.entity.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,7 +25,8 @@ public record PropertyListRespDto(
         Integer aiScore,
         List<String> tags,
         Integer favoriteCount,
-        boolean isSuspicious
+        boolean isSuspicious,
+        PropertyStatus status
 ) {
     public static PropertyListRespDto from(Property property) {
         /**
@@ -60,7 +58,8 @@ public record PropertyListRespDto(
                 property.getAiScore(),
                 property.getTags(),
                 property.getFavoriteCount(),
-                property.isSuspicious()
+                property.isSuspicious(),
+                property.getStatus()
         );
     }
 }
