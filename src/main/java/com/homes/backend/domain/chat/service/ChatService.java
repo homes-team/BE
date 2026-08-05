@@ -2,6 +2,7 @@ package com.homes.backend.domain.chat.service;
 
 import com.homes.backend.domain.chat.dto.response.ChatMessageListResDto;
 import com.homes.backend.domain.chat.dto.response.ChatRoomResDto;
+import com.homes.backend.domain.chat.entity.ChatMessage;
 import com.homes.backend.domain.chat.entity.ChatRoom;
 import com.homes.backend.domain.chat.exception.ChatErrorCode;
 import com.homes.backend.domain.chat.repository.ChatMessageRepository;
@@ -96,14 +97,39 @@ public class ChatService {
     }
 
     /**
-     * 특정 채팅방의 과거 메시지 내역 조회
+     * 특정 채팅방의 과거 메시지 내역 조회. 조회하는 시점에 상대방이 보낸 메시지를 읽음 처리한다
+     * (내가 보낸 메시지의 읽음 여부는 상대방이 조회할 때 바뀌는 값이라 여기서 건드리지 않음).
      */
+    @Transactional
     public List<ChatMessageListResDto> getMessages(Long chatId, Long callerId) {
         ChatRoom room = getRoomAndValidateMembership(chatId, callerId);
+
+        chatMessageRepository.markMessagesAsRead(room.getId(), callerId);
 
         return chatMessageRepository.findAllByRoomIdOrderByCreatedAtAscIdAsc(room.getId()).stream()
                 .map(ChatMessageListResDto::from)
                 .toList();
+    }
+
+    /**
+     * 웹소켓으로 들어온 메시지를 저장. 방 멤버인지는 ChatChannelInterceptor가 SEND 시점에 이미 검증했지만,
+     * 서비스 단에서도 한 번 더 확인해 방어적으로 처리한다 (재사용: getRoomAndValidateMembership).
+     */
+    @Transactional
+    public ChatMessageListResDto sendMessage(Long chatId, Long senderId, String content) {
+        ChatRoom room = getRoomAndValidateMembership(chatId, senderId);
+
+        User sender = room.isUserSide(senderId) ? room.getUser() : room.getAgentUser();
+
+        ChatMessage message = ChatMessage.builder()
+                .content(content)
+                .room(room)
+                .sender(sender)
+                .build();
+
+        chatMessageRepository.save(message);
+
+        return ChatMessageListResDto.from(message);
     }
 
     /**

@@ -106,6 +106,9 @@ public class SecurityConfig {
                                 "/users/realtors"
                         ).permitAll()
 
+                        // 웹소켓 핸드셰이크: Authorization 헤더를 못 붙이는 요청이라 JwtHandshakeInterceptor가 쿼리 파라미터로 자체 인증함
+                        .requestMatchers("/ws/chats/**").permitAll()
+
                         .requestMatchers(
                                 org.springframework.http.HttpMethod.GET,
                                 "/properties",
