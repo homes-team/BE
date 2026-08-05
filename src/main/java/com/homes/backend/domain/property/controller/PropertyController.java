@@ -12,7 +12,6 @@ import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.exception.GlobalErrorCode;
 import com.homes.backend.global.response.ApiResponse;
 import com.homes.backend.global.security.UserPrincipal;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -114,9 +113,12 @@ public class PropertyController implements PropertyControllerDocs {
     @Override
     @GetMapping("/map")
     public ApiResponse<List<PropertyListRespDto>> searchMapProperties(
-            @Valid @ModelAttribute PropertyMapSearchReqDto reqDto
+            @ModelAttribute PropertyMapSearchReqDto reqDto,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto);
+        String role = (userPrincipal != null) ? userPrincipal.getRole() : null;
+
+        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto, role);
         return ApiResponse.onSuccess(response);
     }
 
