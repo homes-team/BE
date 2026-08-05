@@ -2,12 +2,20 @@ package com.homes.backend.domain.property.repository;
 
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
+import com.homes.backend.domain.property.entity.PropertyType;
+import com.homes.backend.domain.property.entity.TradeType;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.locationtech.jts.geom.Polygon;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -16,10 +24,11 @@ import static com.homes.backend.domain.property.entity.QProperty.property;
 @Repository
 @RequiredArgsConstructor
 public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
+
     private final JPAQueryFactory queryFactory;
 
     /**
-     * [하이브리드 추천 및 개인화 필터링 메인 로직]
+     * ====================== 하이브리드 추천 및 개인화 필터링 메인 로직 ======================
      *
      * 1. 하이브리드 점수 산정:
      *    - AI 추천 매물 점수 (aiScore, 50%): 모델이 분석한 객관적 추천 지표
@@ -88,5 +97,86 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
     private BooleanExpression regionContains(String preferredRegion) {
         if (preferredRegion == null || preferredRegion.isBlank()) return null;
         return property.address.contains(preferredRegion);
+    }
+
+
+    /**
+     * ====================== 지도 기반 검색 및 다중 필터링 ======================
+     */
+    @Override
+    public List<Property> findPropertiesByMapAndFilters(
+            Polygon boundingBox, List<PropertyStatus> statuses, TradeType tradeType,
+            PropertyType propertyType, Integer minDeposit, Integer maxDeposit,
+            Integer minMonthlyRent, Integer maxMonthlyRent, String keyword, Sort sort) {
+
+        return queryFactory
+                .selectFrom(property)
+                .distinct()
+                .where(
+                        withinBounds(boundingBox),
+                        statusIn(statuses),
+                        tradeTypeEq(tradeType),
+                        propertyTypeEq(propertyType),
+                        depositBetween(minDeposit, maxDeposit),
+                        monthlyRentBetween(minMonthlyRent, maxMonthlyRent),
+                        keywordMatches(keyword)
+                )
+                .orderBy(getOrderSpecifier(sort))
+                .fetch();
+    }
+
+    /**
+     * --- 동적 쿼리 블록 (지도 검색용) ---
+      */
+    private BooleanExpression withinBounds(Polygon boundingBox) {
+        if (boundingBox == null) return null;
+        return Expressions.booleanTemplate("function('ST_Contains', {0}, {1}) = true", boundingBox, property.coordinate);
+    }
+
+    private BooleanExpression statusIn(List<PropertyStatus> statuses) {
+        return (statuses != null && !statuses.isEmpty()) ? property.status.in(statuses) : null;
+    }
+
+    private BooleanExpression tradeTypeEq(TradeType tradeType) {
+        return tradeType != null ? property.tradeType.eq(tradeType) : null;
+    }
+
+    private BooleanExpression propertyTypeEq(PropertyType propertyType) {
+        return propertyType != null ? property.propertyType.eq(propertyType) : null;
+    }
+
+    private BooleanExpression depositBetween(Integer min, Integer max) {
+        if (min != null && max != null) return property.deposit.between(min, max);
+        if (min != null) return property.deposit.goe(min);
+        if (max != null) return property.deposit.loe(max);
+        return null;
+    }
+
+    private BooleanExpression monthlyRentBetween(Integer min, Integer max) {
+        if (min != null && max != null) return property.monthlyRent.between(min, max);
+        if (min != null) return property.monthlyRent.goe(min);
+        if (max != null) return property.monthlyRent.loe(max);
+        return null;
+    }
+
+    private BooleanExpression keywordMatches(String keyword) {
+        if (!StringUtils.hasText(keyword)) return null;
+
+        String likeKeyword = "%" + keyword + "%";
+        return property.address.like(likeKeyword)
+                .or(property.title.like(likeKeyword))
+                .or(property.tags.any().like(likeKeyword));
+    }
+
+    private OrderSpecifier<?>[] getOrderSpecifier(Sort sort) {
+        if (sort == null || sort.isUnsorted()) {
+            return new OrderSpecifier[]{new OrderSpecifier<>(Order.DESC, property.id)};
+        }
+
+        return sort.stream().map(order -> {
+            Order direction = order.isAscending() ? Order.ASC : Order.DESC;
+            PathBuilder<Property> pathBuilder = new PathBuilder<>(Property.class, "property");
+            return new OrderSpecifier(direction, pathBuilder.get(order.getProperty()));
+        }).toArray(OrderSpecifier[]::new);
     }
 }

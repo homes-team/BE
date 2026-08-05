@@ -10,6 +10,7 @@ import com.homes.backend.global.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -53,10 +54,11 @@ public interface PropertyControllerDocs {
 
     @Operation(summary = "지도 기반 매물 검색", description = "지도의 보이는 영역(좌표) 내에 있는 매물들을 필터링하여 조회합니다.")
     ApiResponse<List<PropertyListRespDto>> searchMapProperties(
-            @ParameterObject @ModelAttribute PropertyMapSearchReqDto reqDto
+            @Valid @ParameterObject @ModelAttribute PropertyMapSearchReqDto reqDto,
+            @Parameter(hidden=true) @AuthenticationPrincipal UserPrincipal userPrincipal
     );
 
-    @Operation(summary = "매물 랭킹 조회", description = "최근 가장 조회수가 높은 상위 10개의 매물 리스트를 실시간으로 조회합니다.")
+    @Operation(summary = "매물 랭킹 조회", description = "최근 가장 조회수와 찜 개수가 높은 상위 10개의 매물 리스트를 실시간으로 조회합니다.")
     ApiResponse<List<PropertyListRespDto>> getSurgeRankings();
 }
 

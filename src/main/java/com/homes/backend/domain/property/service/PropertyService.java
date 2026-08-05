@@ -19,6 +19,7 @@ import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.*;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -223,7 +224,7 @@ public class PropertyService {
      * 지도 영역 내 매물 검색 및 다중 필터링
      */
     @Transactional(readOnly = true)
-    public List<PropertyListRespDto> searchMapProperties(PropertyMapSearchReqDto reqDto) {
+    public List<PropertyListRespDto> searchMapProperties(PropertyMapSearchReqDto reqDto, String role) {
 
         /**
          * Bounding Box 생성
@@ -239,27 +240,38 @@ public class PropertyService {
         boundingBox.setSRID(4326); // 4236: GPS(WGS84) 표준 좌표계
 
         /**
-         * 키워드가 null이 아닐 때만 앞뒤에 % 붙여주기
+         * 정렬 기준 동적 생성
          */
-        String searchKeyword = reqDto.keyword();
-        if (searchKeyword == null || searchKeyword.isBlank()) {
-            searchKeyword = null; // 공백이나 빈 문자열이 들어오면 null로 취급
-        } else {
-            searchKeyword = "%" + searchKeyword + "%";
+        Sort sort = "FAVORITE".equals(reqDto.sortBy())
+                ? Sort.by(Sort.Direction.DESC, "favoriteCount", "id") // 찜 많은 순
+                : Sort.by(Sort.Direction.DESC, "id");                 // 기본: 최신순
+
+        /**
+         * 권한별 지도 매물 상태 노출 필터링
+         */
+        List<PropertyStatus> targetStatuses;
+        if ("AGENT".equals(role)) { // 중개사: 입찰해야 하므로 거래가능 매물만 노출
+            targetStatuses = List.of(PropertyStatus.AVAILABLE);
+        } else if ("ADMIN".equals(role)) {
+            targetStatuses = null;
+        } else { // 일반 유저 & 비로그인 사용자: 방을 구해야 하므로 거래가능 + 매칭완료 노출
+            targetStatuses = List.of(PropertyStatus.AVAILABLE, PropertyStatus.MATCHED);
         }
 
         /**
-         * 필터링 조건
+         * QueryDSL 리포지토리 호출
          */
         List<Property> properties = propertyRepository.findPropertiesByMapAndFilters(
                 boundingBox,
+                targetStatuses, // 권한별로 결정된 매물 상태 리스트 전달
                 reqDto.tradeType(),
                 reqDto.propertyType(),
                 reqDto.minDeposit(),
                 reqDto.maxDeposit(),
                 reqDto.minMonthlyRent(),
                 reqDto.maxMonthlyRent(),
-                searchKeyword
+                reqDto.keyword(),
+                sort
         );
 
         return properties.stream()

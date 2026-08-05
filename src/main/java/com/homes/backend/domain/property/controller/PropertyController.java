@@ -114,9 +114,12 @@ public class PropertyController implements PropertyControllerDocs {
     @Override
     @GetMapping("/map")
     public ApiResponse<List<PropertyListRespDto>> searchMapProperties(
-            @Valid @ModelAttribute PropertyMapSearchReqDto reqDto
+            @Valid @ModelAttribute PropertyMapSearchReqDto reqDto,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto);
+        String role = (userPrincipal != null) ? userPrincipal.getRole() : null;
+
+        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto, role);
         return ApiResponse.onSuccess(response);
     }
 
