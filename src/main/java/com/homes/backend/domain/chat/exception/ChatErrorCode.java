@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum ChatErrorCode implements BaseErrorCode {
 
     CHAT_ROOM_NOT_FOUND("CHAT400_1", "채팅방을 찾을 수 없습니다.", HttpStatus.BAD_REQUEST),
+    EMPTY_MESSAGE_CONTENT("CHAT400_2", "메시지 내용은 비어있을 수 없습니다.", HttpStatus.BAD_REQUEST),
     NOT_CHAT_MEMBER("CHAT403_1", "해당 채팅방에 접근할 권한이 없습니다.", HttpStatus.FORBIDDEN);
 
     private final String code;
