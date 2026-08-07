@@ -106,8 +106,12 @@ public class SecurityConfig {
                                 "/users/realtors"
                         ).permitAll()
 
-                        // 웹소켓 핸드셰이크: Authorization 헤더를 못 붙이는 요청이라 JwtHandshakeInterceptor가 쿼리 파라미터로 자체 인증함
+                        // 웹소켓 핸드셰이크: Authorization 헤더를 못 붙이는 요청이라 WebSocketHandshakeInterceptor가 1회용 티켓으로 자체 인증함
+                        // (POST /ws/tickets 티켓 발급 자체는 일반 REST 요청이라 permitAll 대상 아님 - 로그인 상태에서만 발급 가능)
                         .requestMatchers("/ws/chats/**").permitAll()
+
+                        // 웹소켓 수동 테스트용 정적 페이지 (Swagger로는 테스트 불가능해서 만든 개발용 도구)
+                        .requestMatchers("/ws-test.html").permitAll()
 
                         .requestMatchers(
                                 org.springframework.http.HttpMethod.GET,

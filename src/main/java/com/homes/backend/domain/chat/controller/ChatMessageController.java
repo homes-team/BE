@@ -30,7 +30,7 @@ public class ChatMessageController {
             ChatMessageSendReqDto request,
             SimpMessageHeaderAccessor headerAccessor
     ) {
-        if (!StringUtils.hasText(request.content())) {
+        if (request == null || !StringUtils.hasText(request.content())) {
             throw new CustomException(ChatErrorCode.EMPTY_MESSAGE_CONTENT);
         }
 
