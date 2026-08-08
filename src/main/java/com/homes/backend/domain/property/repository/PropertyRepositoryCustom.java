@@ -1,11 +1,8 @@
 package com.homes.backend.domain.property.repository;
 
-import com.homes.backend.domain.property.entity.Property;
-import com.homes.backend.domain.property.entity.PropertyStatus;
-import com.homes.backend.domain.property.entity.PropertyType;
-import com.homes.backend.domain.property.entity.TradeType;
+import com.homes.backend.domain.property.entity.*;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.data.domain.Sort;
+
 import java.util.List;
 
 public interface PropertyRepositoryCustom {
@@ -23,7 +20,11 @@ public interface PropertyRepositoryCustom {
             Integer maxDeposit,
             Integer minMonthlyRent,
             Integer maxMonthlyRent,
+            Double minArea,
+            Double maxArea,
             String keyword,
-            Sort sort
+            List<PropertyOption> options,
+            String sortBy,
+            List<Long> recentViewedIds
     );
 }

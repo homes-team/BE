@@ -1,9 +1,12 @@
 package com.homes.backend.domain.property.dto.request;
 
+import com.homes.backend.domain.property.entity.PropertyOption;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+
+import java.util.List;
 
 public record PropertyMapSearchReqDto(
         /**
@@ -25,6 +28,12 @@ public record PropertyMapSearchReqDto(
         /**
          * 기본 필터
          */
+        @Schema(description = "검색어 (주소 · 제목 · 태그 부분 일치)", example = "역삼동")
+        String keyword,
+        @Schema(description = "최소 전용면적(m²)", example = "20")
+        Double minArea,
+        @Schema(description = "최대 전용면적(m²)", example = "60")
+        Double maxArea,
         @Schema(description = "거래 종류", example = "MONTHLY_RENT")
         TradeType tradeType,
         @Schema(description = "방 종류", example = "ONE_ROOM")
@@ -47,7 +56,7 @@ public record PropertyMapSearchReqDto(
         /**
          * 추가 필터 (예: 주차가능, 엘리베이터)
          */
-        @Schema(description = "태그 검색 키워드", example = "신축")
-        String keyword // tags 컬럼에서 검색할 키워드
+        @Schema(description = "옵션 필터 (모두 만족, AND 조건)")
+        List<PropertyOption> options
 ) {
 }

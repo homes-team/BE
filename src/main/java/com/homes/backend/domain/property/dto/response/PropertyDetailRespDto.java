@@ -1,9 +1,6 @@
 package com.homes.backend.domain.property.dto.response;
 
-import com.homes.backend.domain.property.entity.Property;
-import com.homes.backend.domain.property.entity.PropertyImage;
-import com.homes.backend.domain.property.entity.PropertyType;
-import com.homes.backend.domain.property.entity.TradeType;
+import com.homes.backend.domain.property.entity.*;
 
 import java.util.List;
 
@@ -24,7 +21,9 @@ public record PropertyDetailRespDto(
         Double area,
         Integer aiScore,
         Double desiredBrokerageFee,
-        List<String> tags,
+        List<PropertyOption> options,
+        String nearestStation,
+        Integer walkingTime,
         Double latitude,
         Double longitude,
         Integer favoriteCount,
@@ -52,7 +51,9 @@ public record PropertyDetailRespDto(
                 property.getArea(),
                 property.getAiScore(),
                 property.getDesiredBrokerageFee(),
-                property.getTags(),
+                property.getOptions(),
+                property.getNearestStation(),
+                property.getWalkingTime(),
                 property.getCoordinate().getY(), // 위도(Latitude)
                 property.getCoordinate().getX(),  // 경도(Longitude)
                 property.getFavoriteCount(),

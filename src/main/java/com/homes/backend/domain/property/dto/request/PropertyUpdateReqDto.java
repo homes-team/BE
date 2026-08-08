@@ -1,5 +1,6 @@
 package com.homes.backend.domain.property.dto.request;
 
+import com.homes.backend.domain.property.entity.PropertyOption;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -20,7 +21,7 @@ public record PropertyUpdateReqDto (
         @Schema(description = "면적 (m²)", example = "19.95") Double area,
         @Schema(description = "매물 한 줄 소개", example = "가격 내렸습니다! 컨디션 좋아요.") String description,
         @Schema(description = "희망 중개 수수료", example = "0.3") Double desiredBrokerageFee,
-        @Schema(description = "매물 태그 리스트", example = "[\"역세권\", \"채광좋음\"]") List<String> tags,
+        @Schema(description = "매물 옵션 리스트", example = "[\"AIR_CONDITIONER\", \"PARKING\"]") List<PropertyOption> options,
         @Schema(description = "위도(Latitude)", example = "37.4979") Double latitude,
         @Schema(description = "경도(Longitude)", example = "127.0276") Double longitude
 ){ }
