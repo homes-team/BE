@@ -23,7 +23,9 @@ public record PropertyListRespDto(
         String description,
         LocalDateTime createdAt,
         Integer aiScore,
-        List<String> tags,
+        List<PropertyOption> options,
+        String nearestStation,
+        Integer walkingTime,
         Integer favoriteCount,
         boolean isSuspicious,
         PropertyStatus status
@@ -56,7 +58,9 @@ public record PropertyListRespDto(
                 property.getDescription(),
                 property.getCreatedAt(),
                 property.getAiScore(),
-                property.getTags(),
+                property.getOptions(),
+                property.getNearestStation(),
+                property.getWalkingTime(),
                 property.getFavoriteCount(),
                 property.isSuspicious(),
                 property.getStatus()

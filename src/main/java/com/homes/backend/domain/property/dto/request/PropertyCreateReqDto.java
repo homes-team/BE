@@ -1,5 +1,6 @@
 package com.homes.backend.domain.property.dto.request;
 
+import com.homes.backend.domain.property.entity.PropertyOption;
 import com.homes.backend.domain.property.entity.PropertyType;
 import com.homes.backend.domain.property.entity.TradeType;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -44,8 +45,8 @@ public record PropertyCreateReqDto(
         @Schema(description = "희망 중개 수수료 비율", example = "0.3")
         Double desiredBrokerageFee,
 
-        @Schema(description = "매물 태그 리스트", example = "[\"신축\", \"풀옵션\", \"역세권\"]")
-        List<String> tags,
+        @Schema(description = "매물 옵션 리스트", example = "[\"AIR_CONDITIONER\", \"PARKING\"]")
+        List<PropertyOption> options,
 
         @Schema(description = "지도 API에서 추출된 위도(Latitude)", example = "37.4979")
         Double latitude,

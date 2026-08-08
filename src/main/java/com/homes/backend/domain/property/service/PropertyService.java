@@ -10,8 +10,7 @@ import com.homes.backend.domain.property.entity.PropertyFavorite;
 import com.homes.backend.domain.property.entity.PropertyImage;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
-import com.homes.backend.domain.property.repository.PropertyFavoriteRepository;
-import com.homes.backend.domain.property.repository.PropertyRepository;
+import com.homes.backend.domain.property.repository.*;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
@@ -19,7 +18,6 @@ import com.homes.backend.global.exception.CustomException;
 import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.*;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,6 +33,8 @@ public class PropertyService {
     private final LocalFileUploader localFileUploader; // S3 대신 로컬 업로더 주입
     private final UserRepository userRepository;
     private final PropertyFavoriteRepository propertyFavoriteRepository;
+    private final RecentViewRepository recentViewRepository;
+    private final StationRepository stationRepository;
 
     /**
      * GPS 표준인 4326(WGS84) 기반으로 Point를 만들어주는 팩토리
@@ -51,9 +51,26 @@ public class PropertyService {
 
         /**
          *  Double 위도/경도를 공간 데이터(Point)로 변환
-         *  (주의: Coordinate는 X(경도), Y(위도) 순서로 넣음)
+         *  (Coordinate는 X(경도), Y(위도) 순서로 넣음)
           */
         Point point = geometryFactory.createPoint(new Coordinate(reqDto.longitude(), reqDto.latitude()));
+
+        /**
+         * 가장 가까운 지하철역 찾기
+         */
+        StationDistanceProjection nearestResult = stationRepository.findNearestStationWithDistance(point);
+        String calcNearestStation = null;
+        Integer calcWalkingTime = null;
+
+        if (nearestResult != null) {
+            calcNearestStation = nearestResult.getPoiName();
+            Double distanceMeter = nearestResult.getDistance();
+
+            if (distanceMeter != null) {
+                // 도보 시간 계산 (성인 걸음 1분 = 80m 기준, 올림 처리)
+                calcWalkingTime = (int) Math.ceil(distanceMeter / 80.0);
+            }
+        }
 
         /**
          *  자동 부제목 생성 로직 (예: "서울시 강남구 역삼동 123" -> "강남구 역삼동 원/투룸")
@@ -76,7 +93,9 @@ public class PropertyService {
                 .area(reqDto.area())
                 .coordinate(point)
                 .desiredBrokerageFee(reqDto.desiredBrokerageFee())
-                .tags(reqDto.tags())
+                .options(reqDto.options())
+                .nearestStation(calcNearestStation)
+                .walkingTime(calcWalkingTime)
                 .aiScore(85) // 가짜 AI 점수를 넣어두고, 추후 AI 모델 연동 시 고도화 예정
                 .status(PropertyStatus.AVAILABLE)
                 .build();
@@ -178,12 +197,32 @@ public class PropertyService {
         Point point = geometryFactory.createPoint(new Coordinate(reqDto.longitude(), reqDto.latitude()));
         String updatedTitle = generateAutomatedTitle(reqDto.address(), reqDto.propertyType().getDescription());
 
+        /**
+         * 주소가 변경되었을 수 있으므로 가장 가까운 지하철역 다시 계산
+          */
+        StationDistanceProjection nearestResult = stationRepository.findNearestStationWithDistance(point);
+        String calcNearestStation = null;
+        Integer calcWalkingTime = null;
+
+        if (nearestResult != null) {
+            calcNearestStation = nearestResult.getPoiName();
+            Double distanceMeter = nearestResult.getDistance();
+
+            if (distanceMeter != null) {
+                // 도보 시간 계산 (성인 걸음 1분 = 80m 기준, 올림 처리)
+                calcWalkingTime = (int) Math.ceil(distanceMeter / 80.0);
+            }
+        }
+
         property.update(
                 updatedTitle, reqDto.description(), reqDto.address(), reqDto.detailAddress(),
                 reqDto.tradeType(), reqDto.propertyType(), reqDto.deposit(),
                 reqDto.monthlyRent(), reqDto.maintenanceFee(), reqDto.totalFloors(),
                 reqDto.currentFloor(), reqDto.area(), point,
-                reqDto.desiredBrokerageFee(), reqDto.tags()
+                reqDto.desiredBrokerageFee(),
+                reqDto.options(),
+                calcNearestStation,
+                calcWalkingTime
         );
 
         /**
@@ -224,7 +263,7 @@ public class PropertyService {
      * 지도 영역 내 매물 검색 및 다중 필터링
      */
     @Transactional(readOnly = true)
-    public List<PropertyListRespDto> searchMapProperties(PropertyMapSearchReqDto reqDto, String role) {
+    public List<PropertyListRespDto> searchMapProperties(PropertyMapSearchReqDto reqDto, String role, Long userId) {
 
         /**
          * Bounding Box 생성
@@ -240,13 +279,6 @@ public class PropertyService {
         boundingBox.setSRID(4326); // 4236: GPS(WGS84) 표준 좌표계
 
         /**
-         * 정렬 기준 동적 생성
-         */
-        Sort sort = "FAVORITE".equals(reqDto.sortBy())
-                ? Sort.by(Sort.Direction.DESC, "favoriteCount", "id") // 찜 많은 순
-                : Sort.by(Sort.Direction.DESC, "id");                 // 기본: 최신순
-
-        /**
          * 권한별 지도 매물 상태 노출 필터링
          */
         List<PropertyStatus> targetStatuses;
@@ -256,6 +288,22 @@ public class PropertyService {
             targetStatuses = null;
         } else { // 일반 유저 & 비로그인 사용자: 방을 구해야 하므로 거래가능 + 매칭완료 노출
             targetStatuses = List.of(PropertyStatus.AVAILABLE, PropertyStatus.MATCHED);
+        }
+
+        /**
+         * 추천순 정렬일 때만 최근 본 방 ID 리스트 조회
+         */
+
+        String normalizedSortBy = (reqDto.sortBy() == null || reqDto.sortBy().isBlank())
+                ? "RECOMMENDED"
+                : reqDto.sortBy();
+
+        List<Long> recentViewedIds = List.of();
+        if ("RECOMMENDED".equals(normalizedSortBy) && userId != null) {
+            recentViewedIds = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId)
+                    .stream()
+                    .map(rv -> rv.getProperty().getId())
+                    .toList();
         }
 
         /**
@@ -270,8 +318,12 @@ public class PropertyService {
                 reqDto.maxDeposit(),
                 reqDto.minMonthlyRent(),
                 reqDto.maxMonthlyRent(),
+                reqDto.minArea(),
+                reqDto.maxArea(),
                 reqDto.keyword(),
-                sort
+                reqDto.options(),
+                normalizedSortBy,
+                recentViewedIds
         );
 
         return properties.stream()

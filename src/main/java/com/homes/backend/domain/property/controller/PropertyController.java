@@ -118,8 +118,9 @@ public class PropertyController implements PropertyControllerDocs {
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         String role = (userPrincipal != null) ? userPrincipal.getRole() : null;
+        Long userId = (userPrincipal != null) ? userPrincipal.getId() : null;
 
-        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto, role);
+        List<PropertyListRespDto> response = propertyService.searchMapProperties(reqDto, role, userId);
         return ApiResponse.onSuccess(response);
     }
 

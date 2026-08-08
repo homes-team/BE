@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
@@ -73,13 +74,24 @@ public class Property extends BaseEntity {
     @Column(nullable = false)
     private Double desiredBrokerageFee; // 희망 중개 수수료
 
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PropertyImage> images = new ArrayList<>();
 
-    @ElementCollection
-    @CollectionTable(name = "property_tags", joinColumns = @JoinColumn(name = "property_id"))
-    @Column(name = "tag")
-    private List<String> tags = new ArrayList<>();
+    @BatchSize(size = 100)
+    @ElementCollection(targetClass = PropertyOption.class)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(name = "property_options", joinColumns = @JoinColumn(name = "property_id"))
+    private List<PropertyOption> options = new ArrayList<>();
+
+    /**
+     * 역세권 정보 (매물 등록 시 1회 계산 후 저장)
+     */
+    @Column
+    private String nearestStation; // 예: 역삼역
+
+    @Column
+    private Integer walkingTime; // 도보 시간 (분 단위, 예: 5)
 
     @Column(nullable = false)
     private Integer favoriteCount = 0;
@@ -103,7 +115,7 @@ public class Property extends BaseEntity {
                     Long monthlyRent, Long maintenanceFee, Integer totalFloors,
                     Integer currentFloor, Double area, Integer aiScore,
                     Point coordinate, Double desiredBrokerageFee,
-                    List<String> tags, PropertyStatus status) {
+                    List<PropertyOption> options, String nearestStation, Integer walkingTime, PropertyStatus status) {
         this.user = user;
         this.title = title;
         this.description = description;
@@ -120,7 +132,9 @@ public class Property extends BaseEntity {
         this.aiScore = aiScore;
         this.coordinate = coordinate;
         this.desiredBrokerageFee = desiredBrokerageFee;
-        this.tags = tags;
+        this.options = options != null ? options : new ArrayList<>();
+        this.nearestStation = nearestStation;
+        this.walkingTime = walkingTime;
         this.status = status;
     }
 
@@ -153,7 +167,9 @@ public class Property extends BaseEntity {
                        TradeType tradeType, PropertyType propertyType, Long deposit,
                        Long monthlyRent, Long maintenanceFee, Integer totalFloors,
                        Integer currentFloor, Double area, Point coordinate,
-                       Double desiredBrokerageFee, List<String> tags) {
+                       Double desiredBrokerageFee, List<PropertyOption> options,
+                       String nearestStation, Integer walkingTime
+    ) {
         this.title = title;
         this.description = description;
         this.address = address;
@@ -168,6 +184,13 @@ public class Property extends BaseEntity {
         this.area = area;
         this.coordinate = coordinate;
         this.desiredBrokerageFee = desiredBrokerageFee;
-        this.tags = tags;
+
+        this.options.clear();
+        if (options != null) {
+            this.options.addAll(options);
+        }
+
+        this.nearestStation = nearestStation;
+        this.walkingTime = walkingTime;
     }
 }

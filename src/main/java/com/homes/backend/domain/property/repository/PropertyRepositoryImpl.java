@@ -1,21 +1,16 @@
 package com.homes.backend.domain.property.repository;
 
-import com.homes.backend.domain.property.entity.Property;
-import com.homes.backend.domain.property.entity.PropertyStatus;
-import com.homes.backend.domain.property.entity.PropertyType;
-import com.homes.backend.domain.property.entity.TradeType;
-import com.querydsl.core.types.Order;
+import com.homes.backend.domain.property.entity.*;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Polygon;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
+import com.homes.backend.domain.property.entity.PropertyOption;
 
 import java.util.List;
 
@@ -26,6 +21,8 @@ import static com.homes.backend.domain.property.entity.QProperty.property;
 public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
 
     private final JPAQueryFactory queryFactory;
+    private static final double AI_SCORE_MAX = 100.0;
+    private static final double FAVORITE_CAP = 300.0; // 찜 300개 이상은 만점 처리
 
     /**
      * ====================== 하이브리드 추천 및 개인화 필터링 메인 로직 ======================
@@ -46,39 +43,72 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
     @Override
     public List<Property> findHybridRecommendations(Double minPrice, Double maxPrice, String preferredRegion, List<Long> recentViewedIds, int limit) {
 
-        /**
-         * 가중치 점수 연산 (AI 점수 50% + 찜하기 50%)
-         */
-        NumberExpression<Double> recommendationScore = property.aiScore.doubleValue().multiply(0.5)
-                .add(property.favoriteCount.doubleValue().multiply(0.45));
-
-        /**
-         * 최근 본 방(5%) 가중치 보너스 적용
-         * - 최근 본 방 ID 리스트에 포함되어 있다면 0.05(5%)를 더하고, 아니면 0.0을 더함
-         */
-        if (recentViewedIds != null && !recentViewedIds.isEmpty()) {
-            NumberExpression<Double> recentBonus = Expressions.cases()
-                    .when(property.id.in(recentViewedIds)).then(0.05)
-                    .otherwise(0.0);
-
-            recommendationScore = recommendationScore.add(recentBonus);
-        }
-
         return queryFactory
                 .selectFrom(property)
                 .where(
-                        // 필수 조건: 거래 가능하며 허위 매물이 아닌 것
                         property.status.eq(PropertyStatus.AVAILABLE),
                         property.isSuspicious.eq(false),
                         property.reportCount.eq(0),
-
-                        // 동적 조건: 값이 null이면 무시됨
                         priceBetween(minPrice, maxPrice),
                         regionContains(preferredRegion)
                 )
-                .orderBy(recommendationScore.desc(), property.createdAt.desc()) // 점수 내림차순, 같으면 최신순
+                .orderBy(recommendationScore(recentViewedIds).desc(), property.createdAt.desc())
                 .limit(limit)
                 .fetch();
+    }
+
+    /**
+     * 점수 정규화 및 하이브리드 계산 메서드
+     */
+    private NumberExpression<Double> recommendationScore(List<Long> recentViewedIds) {
+        // aiScore: NULL이면 0 처리 후 정규화 (가중치 0.5)
+        NumberExpression<Double> aiPart = property.aiScore.coalesce(0).doubleValue()
+                .divide(AI_SCORE_MAX)
+                .multiply(0.5);
+
+        // favoriteCount: 상한선(300)을 두어 정규화 (가중치 0.45)
+        NumberExpression<Double> favPart = Expressions.numberTemplate(Double.class,
+                        "case when {0} > {1} then 1.0 else {0} / {1} end",
+                        property.favoriteCount, FAVORITE_CAP)
+                .multiply(0.45);
+
+        NumberExpression<Double> score = aiPart.add(favPart);
+
+        // 최근 본 방 보너스 가산 (가중치 0.05)
+        if (recentViewedIds != null && !recentViewedIds.isEmpty()) {
+            score = score.add(Expressions.cases()
+                    .when(property.id.in(recentViewedIds)).then(0.05)
+                    .otherwise(0.0));
+        }
+        return score;
+    }
+
+    /**
+     * sortBy 값에 따른 정렬 분기 메서드 추가
+     */
+    private OrderSpecifier<?>[] getOrderSpecifier(String sortBy, List<Long> recentViewedIds) {
+        if ("RECOMMENDED".equals(sortBy)) {
+            return new OrderSpecifier[]{
+                    recommendationScore(recentViewedIds).desc(),
+                    property.id.desc()
+            };
+        }
+        if ("FAVORITE".equals(sortBy)) {
+            return new OrderSpecifier[]{
+                    property.favoriteCount.desc(),
+                    property.id.desc()
+            };
+        }
+        if ("LATEST".equals(sortBy)) {
+            return new OrderSpecifier[]{
+                    property.id.desc()
+            };
+        }
+        // 기본값 처리
+        return new OrderSpecifier[]{
+                recommendationScore(recentViewedIds).desc(),
+                property.id.desc()
+        };
     }
 
     /**
@@ -107,11 +137,12 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
     public List<Property> findPropertiesByMapAndFilters(
             Polygon boundingBox, List<PropertyStatus> statuses, TradeType tradeType,
             PropertyType propertyType, Integer minDeposit, Integer maxDeposit,
-            Integer minMonthlyRent, Integer maxMonthlyRent, String keyword, Sort sort) {
+            Integer minMonthlyRent, Integer maxMonthlyRent, Double minArea, Double maxArea,
+            String keyword, List<PropertyOption> options, String sortBy, List<Long> recentViewedIds
+    ) {
 
         return queryFactory
                 .selectFrom(property)
-                .distinct()
                 .where(
                         withinBounds(boundingBox),
                         statusIn(statuses),
@@ -119,9 +150,11 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
                         propertyTypeEq(propertyType),
                         depositBetween(minDeposit, maxDeposit),
                         monthlyRentBetween(minMonthlyRent, maxMonthlyRent),
-                        keywordMatches(keyword)
+                        areaBetween(minArea, maxArea),
+                        keywordMatches(keyword),
+                        optionsContainAll(options)
                 )
-                .orderBy(getOrderSpecifier(sort))
+                .orderBy(getOrderSpecifier(sortBy, recentViewedIds))
                 .fetch();
     }
 
@@ -159,24 +192,46 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
         return null;
     }
 
+    private BooleanExpression areaBetween(Double min, Double max) {
+        if (min != null && max != null) {
+            return property.area.between(min, max);
+        }
+        if (min != null) {
+            return property.area.goe(min);
+        }
+        if (max != null) {
+            return property.area.loe(max);
+        }
+        return null; // 조건이 안 들어오면 전체 검색(무시)
+    }
+
+
     private BooleanExpression keywordMatches(String keyword) {
         if (!StringUtils.hasText(keyword)) return null;
 
         String likeKeyword = "%" + keyword + "%";
-        return property.address.like(likeKeyword)
-                .or(property.title.like(likeKeyword))
-                .or(property.tags.any().like(likeKeyword));
-    }
+        BooleanExpression expression = property.address.like(likeKeyword)
+                .or(property.title.like(likeKeyword));
 
-    private OrderSpecifier<?>[] getOrderSpecifier(Sort sort) {
-        if (sort == null || sort.isUnsorted()) {
-            return new OrderSpecifier[]{new OrderSpecifier<>(Order.DESC, property.id)};
+        // 입력한 검색어(예: "에어컨")가 PropertyOption의 한글 설명과 일치하면 OR 조건으로 추가
+        for (PropertyOption option : PropertyOption.values()) {
+            if (option.getDescription().contains(keyword)) {
+                expression = expression.or(property.options.any().eq(option));
+            }
         }
 
-        return sort.stream().map(order -> {
-            Order direction = order.isAscending() ? Order.ASC : Order.DESC;
-            PathBuilder<Property> pathBuilder = new PathBuilder<>(Property.class, "property");
-            return new OrderSpecifier(direction, pathBuilder.get(order.getProperty()));
-        }).toArray(OrderSpecifier[]::new);
+        return expression;
     }
+
+    private BooleanExpression optionsContainAll(List<PropertyOption> options) {
+        if (options == null || options.isEmpty()) return null;
+
+        BooleanExpression expr = null;
+        for (PropertyOption option : options) {
+            BooleanExpression cond = property.options.any().eq(option);
+            expr = (expr == null) ? cond : expr.and(cond);
+        }
+        return expr;
+    }
+
 }
