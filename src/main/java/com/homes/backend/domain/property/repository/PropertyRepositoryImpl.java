@@ -90,16 +90,21 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
         if ("RECOMMENDED".equals(sortBy)) {
             return new OrderSpecifier[]{
                     recommendationScore(recentViewedIds).desc(),
-                    property.id.desc() // 동점 시 최신순으로
+                    property.id.desc()
             };
         }
         if ("FAVORITE".equals(sortBy)) {
             return new OrderSpecifier[]{
                     property.favoriteCount.desc(),
-                    property.id.desc() // 동점 시 최신순
+                    property.id.desc()
             };
         }
-        // 기본값(null 이거나 이상한 값이 들어왔을 때)을 RECOMMENDED로 처리
+        if ("LATEST".equals(sortBy)) {
+            return new OrderSpecifier[]{
+                    property.id.desc()
+            };
+        }
+        // 기본값 처리
         return new OrderSpecifier[]{
                 recommendationScore(recentViewedIds).desc(),
                 property.id.desc()
@@ -200,12 +205,22 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
         return null; // 조건이 안 들어오면 전체 검색(무시)
     }
 
+
     private BooleanExpression keywordMatches(String keyword) {
         if (!StringUtils.hasText(keyword)) return null;
 
         String likeKeyword = "%" + keyword + "%";
-        return property.address.like(likeKeyword)
+        BooleanExpression expression = property.address.like(likeKeyword)
                 .or(property.title.like(likeKeyword));
+
+        // 입력한 검색어(예: "에어컨")가 PropertyOption의 한글 설명과 일치하면 OR 조건으로 추가
+        for (PropertyOption option : PropertyOption.values()) {
+            if (option.getDescription().contains(keyword)) {
+                expression = expression.or(property.options.any().eq(option));
+            }
+        }
+
+        return expression;
     }
 
     private BooleanExpression optionsContainAll(List<PropertyOption> options) {

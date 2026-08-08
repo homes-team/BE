@@ -64,12 +64,6 @@ public class PropertyService {
 
         if (nearestResult != null) {
             calcNearestStation = nearestResult.getPoiName();
-
-            // 수집된 원본 데이터의 "역역" -> "역"으로
-            if (calcNearestStation != null && calcNearestStation.endsWith("역역")) {
-                calcNearestStation = calcNearestStation.replace("역역", "역");
-            }
-
             Double distanceMeter = nearestResult.getDistance();
 
             if (distanceMeter != null) {
@@ -212,12 +206,6 @@ public class PropertyService {
 
         if (nearestResult != null) {
             calcNearestStation = nearestResult.getPoiName();
-
-            // 수집된 원본 데이터의 "역역" -> "역"으로
-            if (calcNearestStation != null && calcNearestStation.endsWith("역역")) {
-                calcNearestStation = calcNearestStation.replace("역역", "역");
-            }
-
             Double distanceMeter = nearestResult.getDistance();
 
             if (distanceMeter != null) {
@@ -305,8 +293,13 @@ public class PropertyService {
         /**
          * 추천순 정렬일 때만 최근 본 방 ID 리스트 조회
          */
+
+        String normalizedSortBy = (reqDto.sortBy() == null || reqDto.sortBy().isBlank())
+                ? "RECOMMENDED"
+                : reqDto.sortBy();
+
         List<Long> recentViewedIds = List.of();
-        if ("RECOMMENDED".equals(reqDto.sortBy()) && userId != null) {
+        if ("RECOMMENDED".equals(normalizedSortBy) && userId != null) {
             recentViewedIds = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId)
                     .stream()
                     .map(rv -> rv.getProperty().getId())
@@ -329,7 +322,7 @@ public class PropertyService {
                 reqDto.maxArea(),
                 reqDto.keyword(),
                 reqDto.options(),
-                reqDto.sortBy(),
+                normalizedSortBy,
                 recentViewedIds
         );
 

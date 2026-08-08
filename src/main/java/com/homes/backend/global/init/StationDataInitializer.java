@@ -37,7 +37,7 @@ public class StationDataInitializer implements ApplicationRunner {
             return;
         }
 
-        log.info("🚀 지하철역 데이터 초기화를 시작합니다...");
+        log.info("지하철역 데이터 초기화를 시작합니다...");
 
         try {
             // 파일이 반드시 src/main/resources 폴더 바로 아래에 있어야 합니다!
@@ -56,9 +56,15 @@ public class StationDataInitializer implements ApplicationRunner {
                     double lon = properties.path("lon").asDouble();
                     Point point = geometryFactory.createPoint(new Coordinate(lon, lat));
 
+                    // '역역' -> '역' 으로 정제
+                    String rawPoiName = properties.path("poi_name").asText();
+                    String cleanPoiName = (rawPoiName != null && rawPoiName.endsWith("역역"))
+                            ? rawPoiName.replace("역역", "역")
+                            : rawPoiName;
+
                     Station station = Station.builder()
                             .poiId(properties.path("poi_id").asText())
-                            .poiName(properties.path("poi_name").asText())
+                            .poiName(cleanPoiName)
                             .poiType(poiType)
                             .coordinate(point)
                             .build();
@@ -68,10 +74,11 @@ public class StationDataInitializer implements ApplicationRunner {
             }
 
             stationRepository.saveAll(stationsToSave);
-            log.info("🎉 지하철역 데이터 {}개 저장 완료!", stationsToSave.size());
+            log.info("지하철역 데이터 {}개 저장 완료!", stationsToSave.size());
 
         } catch (Exception e) {
             log.error("❌ 지하철역 데이터 초기화 중 에러 발생 (파일 경로 확인 필요)", e);
+            throw new IllegalStateException("지하철역 데이터 초기화에 실패했습니다.", e);
         }
     }
 }
