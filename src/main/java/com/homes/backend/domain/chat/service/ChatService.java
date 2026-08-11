@@ -7,6 +7,8 @@ import com.homes.backend.domain.chat.entity.ChatRoom;
 import com.homes.backend.domain.chat.exception.ChatErrorCode;
 import com.homes.backend.domain.chat.repository.ChatMessageRepository;
 import com.homes.backend.domain.chat.repository.ChatRoomRepository;
+import com.homes.backend.domain.notification.entity.NotificationType;
+import com.homes.backend.domain.notification.service.NotificationService;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.property.repository.PropertyRepository;
@@ -31,6 +33,7 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final PropertyRepository propertyRepository;
     private final AgentRepository agentRepository;
+    private final NotificationService notificationService;
 
     /**
      * 유저가 특정 매물에 대해 특정 중개사와의 채팅방을 직접 열기 (버튼 클릭 흐름)
@@ -119,7 +122,9 @@ public class ChatService {
     public ChatMessageListResDto sendMessage(Long chatId, Long senderId, String content) {
         ChatRoom room = getRoomAndValidateMembership(chatId, senderId);
 
-        User sender = room.isUserSide(senderId) ? room.getUser() : room.getAgentUser();
+        boolean senderIsUserSide = room.isUserSide(senderId);
+        User sender = senderIsUserSide ? room.getUser() : room.getAgentUser();
+        User recipient = senderIsUserSide ? room.getAgentUser() : room.getUser();
 
         ChatMessage message = ChatMessage.builder()
                 .content(content)
@@ -128,6 +133,9 @@ public class ChatService {
                 .build();
 
         chatMessageRepository.save(message);
+
+        notificationService.createNotification(
+                recipient.getId(), NotificationType.CHAT, "새로운 채팅 메시지가 도착했습니다.", chatId);
 
         return ChatMessageListResDto.from(message);
     }
