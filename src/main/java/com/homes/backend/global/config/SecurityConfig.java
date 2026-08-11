@@ -113,6 +113,9 @@ public class SecurityConfig {
                         // 웹소켓 수동 테스트용 정적 페이지 (Swagger로는 테스트 불가능해서 만든 개발용 도구)
                         .requestMatchers("/ws-test.html").permitAll()
 
+                        // SSE도 웹소켓과 같은 이유(EventSource가 커스텀 헤더를 못 붙임)로 티켓 기반 자체 인증
+                        .requestMatchers("/users/me/notifications/stream").permitAll()
+
                         .requestMatchers(
                                 org.springframework.http.HttpMethod.GET,
                                 "/properties",

@@ -11,6 +11,8 @@ import com.homes.backend.domain.bid.exception.BidErrorCode;
 import com.homes.backend.domain.bid.repository.BidRepository;
 import com.homes.backend.domain.bid.repository.NegotiationRepository;
 import com.homes.backend.domain.chat.service.ChatService;
+import com.homes.backend.domain.notification.entity.NotificationType;
+import com.homes.backend.domain.notification.service.NotificationService;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
@@ -35,6 +37,7 @@ public class BidService {
     private final AgentRepository agentRepository;
     private final NegotiationRepository negotiationRepository;
     private final ChatService chatService;
+    private final NotificationService notificationService;
 
     /**
      * 중개사가 수수료 역제안 제시
@@ -172,6 +175,10 @@ public class BidService {
 
         // 매칭 확정된 전속 중개사와의 1:1 채팅방 생성/재오픈
         chatService.createOrReopenRoom(property, property.getUser(), bid.getAgent().getUser());
+
+        // 매칭 확정 알림 (집주인은 본인이 직접 한 행동이라 알 필요 없고, 중개사한테만 알림)
+        notificationService.createNotification(
+                bid.getAgent().getUser().getId(), NotificationType.MATCHING, "매칭이 확정되었습니다.", propertyId);
     }
 
     /**
