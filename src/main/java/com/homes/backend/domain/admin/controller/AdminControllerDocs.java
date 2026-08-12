@@ -15,7 +15,7 @@ import java.util.List;
 @Tag(name = "관리자(Admin) API", description = "관리자 전용 API")
 public interface AdminControllerDocs {
 
-    @Operation(summary = "중개사 목록 조회", description = "전체 중개사 목록을 조회합니다. 승인 대기 중인(미승인) 중개사가 먼저 보이도록 정렬됩니다.")
+    @Operation(summary = "승인 대기 중개사 목록 조회", description = "아직 승인되지 않은(isVerified=false) 중개사 목록을 오래 기다린 순으로 조회합니다.")
     @GetMapping
     ApiResponse<List<AdminRealtorSummaryResDto>> getRealtors();
 

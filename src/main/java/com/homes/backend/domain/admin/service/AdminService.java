@@ -20,7 +20,7 @@ public class AdminService {
     private final AgentRepository agentRepository;
 
     public List<AdminRealtorSummaryResDto> getRealtors() {
-        return agentRepository.findAllByOrderByIsVerifiedAscCreatedAtAsc().stream()
+        return agentRepository.findByIsVerifiedFalseOrderByCreatedAtAsc().stream()
                 .map(AdminRealtorSummaryResDto::from)
                 .toList();
     }

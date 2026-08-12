@@ -31,10 +31,10 @@ public interface AgentRepository extends JpaRepository<Agent, Long> {
     void addToReputationScore(@Param("agentId") Long agentId, @Param("delta") float delta);
 
     /**
-     * 관리자용 중개사 목록. 승인 대기 중인(미승인) 중개사가 먼저 보이도록 정렬
+     * 관리자용 승인 대기 중개사 목록. 오래 기다린 순으로 정렬
      */
     @EntityGraph(attributePaths = "user")
-    List<Agent> findAllByOrderByIsVerifiedAscCreatedAtAsc();
+    List<Agent> findByIsVerifiedFalseOrderByCreatedAtAsc();
 
     /**
      * 관리자 승인 처리. read-modify-write 대신 원자적 UPDATE로 처리(addToReputationScore와 동일한 이유)
