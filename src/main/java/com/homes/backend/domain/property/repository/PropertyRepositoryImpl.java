@@ -214,9 +214,11 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
                 .or(property.title.like(likeKeyword));
 
         // 입력한 검색어(예: "에어컨")가 PropertyOption의 한글 설명과 일치하면 OR 조건으로 추가
-        for (PropertyOption option : PropertyOption.values()) {
-            if (option.getDescription().contains(keyword)) {
-                expression = expression.or(property.options.any().eq(option));
+        if (keyword.length() >= 2) {
+            for (PropertyOption option : PropertyOption.values()) {
+                if (option.getDescription().contains(keyword)) {
+                    expression = expression.or(property.options.any().eq(option));
+                }
             }
         }
 
