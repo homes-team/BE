@@ -68,7 +68,10 @@ public class PropertyService {
 
             if (distanceMeter != null) {
                 // 도보 시간 계산 (성인 걸음 1분 = 80m 기준, 올림 처리)
-                calcWalkingTime = (int) Math.ceil(distanceMeter / 80.0);
+                int calculatedTime = (int) Math.ceil(distanceMeter / 80.0);
+
+                // 도보 20분 초과 시 무의미하므로 null 처리
+                calcWalkingTime = (calculatedTime > 20) ? null : calculatedTime;
             }
         }
 
@@ -210,7 +213,10 @@ public class PropertyService {
 
             if (distanceMeter != null) {
                 // 도보 시간 계산 (성인 걸음 1분 = 80m 기준, 올림 처리)
-                calcWalkingTime = (int) Math.ceil(distanceMeter / 80.0);
+                int calculatedTime = (int) Math.ceil(distanceMeter / 80.0);
+
+                // 도보 20분 초과 시 무의미하므로 null 처리
+                calcWalkingTime = (calculatedTime > 20) ? null : calculatedTime;
             }
         }
 

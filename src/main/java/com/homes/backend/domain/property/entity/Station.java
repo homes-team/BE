@@ -9,6 +9,7 @@ import org.locationtech.jts.geom.Point;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
+@Table(name = "station")
 public class Station {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,6 +19,6 @@ public class Station {
     private String poiName; // 예: 4.19민주묘지역
     private String poiType; // 예: 지하철역
 
-    @Column(columnDefinition = "GEOMETRY")
+    @Column(columnDefinition = "geometry(Point, 4326)")
     private Point coordinate; // 위경도 공간 데이터
 }
