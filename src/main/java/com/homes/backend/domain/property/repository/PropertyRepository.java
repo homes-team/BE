@@ -100,4 +100,9 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, Prope
      * 이미 삭제 처리된 매물은 더 조치할 게 없으므로 제외
      */
     List<Property> findByReportCountGreaterThanAndStatusNotOrderByReportCountDesc(Integer reportCount, PropertyStatus excludedStatus);
+
+    /**
+     * 급등 랭킹 조회용. Redis에는 삭제된 매물의 ID가 여전히 남아있을 수 있으므로 여기서 걸러낸다
+     */
+    List<Property> findByIdInAndStatusNot(List<Long> ids, PropertyStatus excludedStatus);
 }

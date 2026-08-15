@@ -59,7 +59,8 @@ public class PropertyController implements PropertyControllerDocs {
             @PathVariable Long propertyId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        PropertyDetailRespDto response = propertyService.getProperty(propertyId);
+        boolean isAdmin = userPrincipal != null && "ADMIN".equals(userPrincipal.getRole());
+        PropertyDetailRespDto response = propertyService.getProperty(propertyId, isAdmin);
 
         // 최근 본 방 기록
         if (userPrincipal != null) { // 로그인한 유저라면

@@ -2,6 +2,7 @@ package com.homes.backend.domain.property.service;
 
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.property.repository.RecentViewRepository;
 import com.homes.backend.global.exception.CustomException;
@@ -28,7 +29,7 @@ public class PropertyRecommendationService {
         }
 
         // 유저의 최근 본 방 기록(Top 20)을 조회하여 추출
-        List<Long> recentViewedIds = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId)
+        List<Long> recentViewedIds = recentViewRepository.findTop20ByUserIdAndPropertyStatusNotOrderByViewedAtDesc(userId, PropertyStatus.DELETED)
                 .stream()
                 .map(recentView -> recentView.getProperty().getId())
                 .toList();

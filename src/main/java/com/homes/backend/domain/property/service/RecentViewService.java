@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.service;
 
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.property.repository.RecentViewRepository;
 import com.homes.backend.domain.user.repository.UserRepository;
@@ -30,7 +31,7 @@ public class RecentViewService {
      */
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> getMyRecentViews(Long userId) {
-        return recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId).stream()
+        return recentViewRepository.findTop20ByUserIdAndPropertyStatusNotOrderByViewedAtDesc(userId, PropertyStatus.DELETED).stream()
                 .map(recentView -> PropertyListRespDto.from(recentView.getProperty()))
                 .toList();
     }

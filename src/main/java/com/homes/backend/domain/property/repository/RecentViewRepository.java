@@ -1,6 +1,7 @@
 package com.homes.backend.domain.property.repository;
 
 import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.entity.RecentView;
 import com.homes.backend.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,9 +20,9 @@ public interface RecentViewRepository extends JpaRepository<RecentView, Long> {
     Optional<RecentView> findByUserAndProperty(User user, Property property);
 
     /**
-     * 내가 최근 본 방 목록 최신순 조회(Top 20개 조회)
+     * 내가 최근 본 방 목록 최신순 조회(Top 20개 조회). 이후 삭제(DELETED)된 매물은 제외
      */
-    List<RecentView> findTop20ByUserIdOrderByViewedAtDesc(Long userId);
+    List<RecentView> findTop20ByUserIdAndPropertyStatusNotOrderByViewedAtDesc(Long userId, PropertyStatus status);
 
     /**
      * 최근 본 방 기록 저장 및 시간 갱신 (네이티브 UPSERT)

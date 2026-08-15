@@ -149,12 +149,17 @@ public class PropertyService {
     }
 
     /**
-     * 매물 상세 조회 (Read)
+     * 매물 상세 조회 (Read). 삭제된 매물은 관리자만 전체 정보를 볼 수 있고,
+     * 그 외에는 "삭제된 매물입니다" 안내에 필요한 최소 정보만 내려간다.
      */
     @Transactional(readOnly = true)
-    public PropertyDetailRespDto getProperty(Long propertyId) {
+    public PropertyDetailRespDto getProperty(Long propertyId, boolean isAdmin) {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
+
+        if (property.getStatus() == PropertyStatus.DELETED && !isAdmin) {
+            return PropertyDetailRespDto.deleted(property);
+        }
 
         return PropertyDetailRespDto.from(property);
     }
@@ -300,7 +305,7 @@ public class PropertyService {
 
         List<Long> recentViewedIds = List.of();
         if ("RECOMMENDED".equals(normalizedSortBy) && userId != null) {
-            recentViewedIds = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId)
+            recentViewedIds = recentViewRepository.findTop20ByUserIdAndPropertyStatusNotOrderByViewedAtDesc(userId, PropertyStatus.DELETED)
                     .stream()
                     .map(rv -> rv.getProperty().getId())
                     .toList();
