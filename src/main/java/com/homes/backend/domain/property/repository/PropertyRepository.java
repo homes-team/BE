@@ -14,8 +14,12 @@ import java.util.Optional;
 
 public interface PropertyRepository extends JpaRepository<Property, Long>, PropertyRepositoryCustom {
     List<Property> findAllByUserId(Long userId);
-    boolean existsByUserId(Long userId);
-    List<Property> findAllByOrderByIdDesc(); // 최신 등록순
+    boolean existsByUserIdAndStatusNot(Long userId, PropertyStatus status);
+
+    /**
+     * 전체 매물 목록. 삭제(DELETED)된 매물은 자연히 제외
+     */
+    List<Property> findAllByStatusNotOrderByIdDesc(PropertyStatus status);
 
     /**
      * 주어진 좌표(중개사무소) 기준으로 거래가능한 매물을 거리순으로 조회 (DB 레벨 공간 연산 + LIMIT 적용)
@@ -88,4 +92,10 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, Prope
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Property p WHERE p.id = :id")
     Optional<Property> findByIdWithPessimisticLock(@Param("id") Long id);
+
+    /**
+     * 관리자용 신고된 매물 목록. 신고 많은 순 정렬(의심 매물은 reportCount>=5라 자연히 위쪽에 몰림).
+     * 이미 삭제 처리된 매물은 더 조치할 게 없으므로 제외
+     */
+    List<Property> findByReportCountGreaterThanAndStatusNotOrderByReportCountDesc(Integer reportCount, PropertyStatus excludedStatus);
 }

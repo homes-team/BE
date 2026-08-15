@@ -161,6 +161,14 @@ public class Property extends BaseEntity {
     }
 
     /**
+     * 소프트 삭제. 신고/입찰/채팅방 등 다른 데이터가 이 매물을 참조하고 있을 수 있어
+     * 물리적으로 지우지 않고 상태만 DELETED로 바꾼다.
+     */
+    public void markAsDeleted() {
+        this.status = PropertyStatus.DELETED;
+    }
+
+    /**
      * 매물 정보 수정
      */
     public void update(String title, String description, String address, String detailAddress,

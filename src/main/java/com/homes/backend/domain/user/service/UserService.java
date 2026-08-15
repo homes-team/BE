@@ -16,6 +16,7 @@ import com.homes.backend.domain.user.dto.response.UserUpdateProfileResDto;
 import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.domain.user.exception.UserErrorCode;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.repository.PropertyFavoriteRepository;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import com.homes.backend.domain.property.repository.PropertyReportRepository;
@@ -205,7 +206,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        if (propertyRepository.existsByUserId(userId)) {
+        if (propertyRepository.existsByUserIdAndStatusNot(userId, PropertyStatus.DELETED)) {
             throw new CustomException(UserErrorCode.HAS_ACTIVE_PROPERTIES);
         }
 

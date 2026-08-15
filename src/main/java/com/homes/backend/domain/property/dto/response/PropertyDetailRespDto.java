@@ -27,7 +27,8 @@ public record PropertyDetailRespDto(
         Double latitude,
         Double longitude,
         Integer favoriteCount,
-        boolean isSuspicious
+        boolean isSuspicious,
+        PropertyStatus status
 ) {
     public static PropertyDetailRespDto from(Property property) {
         List<String> urls = property.getImages().stream()
@@ -57,7 +58,8 @@ public record PropertyDetailRespDto(
                 property.getCoordinate().getY(), // 위도(Latitude)
                 property.getCoordinate().getX(),  // 경도(Longitude)
                 property.getFavoriteCount(),
-                property.isSuspicious()
+                property.isSuspicious(),
+                property.getStatus()
         );
     }
 }

@@ -143,7 +143,7 @@ public class PropertyService {
      */
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> getAllProperties() {
-        return propertyRepository.findAllByOrderByIdDesc().stream()
+        return propertyRepository.findAllByStatusNotOrderByIdDesc(PropertyStatus.DELETED).stream()
                 .map(PropertyListRespDto::from)
                 .toList();
     }
@@ -177,7 +177,7 @@ public class PropertyService {
                 .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
         validateOwnership(property, userId);
-        propertyRepository.delete(property);
+        property.markAsDeleted();
     }
 
 
