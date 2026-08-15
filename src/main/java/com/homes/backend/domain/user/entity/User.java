@@ -4,6 +4,8 @@ import com.homes.backend.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -53,6 +55,9 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
     @Column(name = "refresh_token", length = 255) // JWT 리프레시 토큰 (NULL 가능)
     private String refreshToken;
 
+    @Column(name = "deleted_at") // NULL이면 활성 계정, 값이 있으면 탈퇴한 계정
+    private LocalDateTime deletedAt;
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
@@ -66,5 +71,22 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
     public void updateProfile(String nickname, String usagePurpose) {
         this.nickname = nickname;
         this.usagePurpose = usagePurpose;
+    }
+
+    /**
+     * 회원 탈퇴: row를 물리적으로 지우지 않고 개인정보만 지운 뒤 탈퇴 처리한다.
+     * 매물/리뷰/채팅/알림 등 다른 테이블이 user_id를 참조하고 있어 물리 삭제하면 그 수만큼 FK 위반 위험이 생기고,
+     * 신고·거래 기록 같은 감사 데이터도 보존해야 하므로 소프트 삭제로 처리한다.
+     * 이메일/닉네임은 UNIQUE라 재가입 시 값이 겹치지 않도록 고유한 값으로 치환한다.
+     */
+    public void anonymize() {
+        this.email = "withdrawn-" + this.id + "@deleted.homes";
+        this.password = null;
+        this.name = null;
+        this.phone = null;
+        this.nickname = null;
+        this.providerId = null;
+        this.refreshToken = null;
+        this.deletedAt = LocalDateTime.now();
     }
 }

@@ -252,7 +252,7 @@ public class PropertyService {
      */
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> getMyProperties(Long userId){
-        List<Property> myProperties = propertyRepository.findAllByUserId(userId);
+        List<Property> myProperties = propertyRepository.findAllByUserIdAndStatusNot(userId, PropertyStatus.DELETED);
 
         return myProperties.stream()
                 .map(PropertyListRespDto::from)
@@ -336,7 +336,7 @@ public class PropertyService {
      */
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> getMyFavoriteProperties(Long userId) {
-        List<PropertyFavorite> favorites = propertyFavoriteRepository.findAllByUserIdWithProperty(userId);
+        List<PropertyFavorite> favorites = propertyFavoriteRepository.findAllByUserIdWithProperty(userId, PropertyStatus.DELETED);
 
         return favorites.stream()
                 .map(favorite -> PropertyListRespDto.from(favorite.getProperty()))

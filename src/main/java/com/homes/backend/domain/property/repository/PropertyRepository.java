@@ -13,8 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PropertyRepository extends JpaRepository<Property, Long>, PropertyRepositoryCustom {
-    List<Property> findAllByUserId(Long userId);
-    boolean existsByUserIdAndStatusNot(Long userId, PropertyStatus status);
+    /**
+     * 내가 등록한 매물 목록. 삭제(DELETED)된 매물은 자연히 제외
+     */
+    List<Property> findAllByUserIdAndStatusNot(Long userId, PropertyStatus status);
 
     /**
      * 전체 매물 목록. 삭제(DELETED)된 매물은 자연히 제외
