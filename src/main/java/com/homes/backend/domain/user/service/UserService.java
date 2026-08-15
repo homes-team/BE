@@ -17,8 +17,6 @@ import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.property.repository.PropertyFavoriteRepository;
-import com.homes.backend.domain.property.repository.PropertyRepository;
-import com.homes.backend.domain.property.repository.PropertyReportRepository;
 import com.homes.backend.domain.property.repository.RecentViewRepository;
 import com.homes.backend.domain.realtor.repository.AgentRepository;
 import com.homes.backend.global.exception.CustomException;
@@ -55,9 +53,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTemplate<String, Object> redisTemplate;
     private final JavaMailSender mailSender;
-    private final PropertyRepository propertyRepository;
     private final PropertyFavoriteRepository propertyFavoriteRepository;
-    private final PropertyReportRepository propertyReportRepository;
     private final RecentViewRepository recentViewRepository;
     private final AgentRepository agentRepository;
     private static final long AUTH_CODE_EXPIRATION = 300L; // 인증번호 유효시간: 5분 (300초)
@@ -194,10 +190,10 @@ public class UserService {
     }
 
     /**
-     * 회원 탈퇴: DB에서 회원 정보를 완전히 삭제한다.
-     * 등록된 매물이 남아있으면, 다른 유저의 찜/신고가 그 매물에 걸려있을 수 있어 안전하게 정리할 수 없으므로
-     * 먼저 매물을 삭제(DELETE /properties/{id})하도록 안내하고 탈퇴를 막는다.
-     * 본인 소유의 찜/신고/최근 본 방 기록/중개사 프로필은 다른 유저의 데이터에 영향을 주지 않으므로 함께 정리한다.
+     * 회원 탈퇴: row를 물리적으로 지우지 않고 개인정보만 지우는 소프트 삭제(익명화)로 처리한다.
+     * 매물/리뷰/채팅/알림 등 여러 테이블이 user_id를 참조하고 있어 물리 삭제하면 그만큼 FK 위반 위험이 있고,
+     * 신고·거래 기록 같은 감사 데이터도 탈퇴 후에 남아있어야 하므로, 유저 row 자체는 남기고 anonymize()만 호출한다.
+     * 본인 소유의 찜/최근 본 방 기록/중개사 프로필은 더 이상 의미가 없는 개인화 데이터라 함께 정리한다.
      * @param userId 토큰에서 추출한 로그인한 유저의 고유 ID
      */
     @Transactional
@@ -205,15 +201,10 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        if (propertyRepository.existsByUserId(userId)) {
-            throw new CustomException(UserErrorCode.HAS_ACTIVE_PROPERTIES);
-        }
-
         propertyFavoriteRepository.deleteAllByUserId(userId);
-        propertyReportRepository.deleteAllByReporterId(userId);
         recentViewRepository.deleteAllByUserId(userId);
         agentRepository.deleteByUserId(userId);
-        userRepository.delete(user);
+        user.anonymize();
 
         // 탈퇴한 계정으로 새 토큰을 재발급받지 못하도록 Refresh Token도 함께 폐기
         redisTemplate.delete("RT:" + userId);

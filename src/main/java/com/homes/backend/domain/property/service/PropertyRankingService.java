@@ -2,6 +2,7 @@ package com.homes.backend.domain.property.service;
 
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
 import com.homes.backend.domain.property.entity.Property;
+import com.homes.backend.domain.property.entity.PropertyStatus;
 import com.homes.backend.domain.property.repository.PropertyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -65,7 +66,7 @@ public class PropertyRankingService {
                 .map(Long::valueOf)
                 .toList();
 
-        List<Property> properties = propertyRepository.findAllById(propertyIds);
+        List<Property> properties = propertyRepository.findByIdInAndStatusNot(propertyIds, PropertyStatus.DELETED);
 
         /**
          * Redis 순서(인기순)대로 정렬
