@@ -3,6 +3,7 @@ package com.homes.backend.domain.user.entity;
 import com.homes.backend.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -60,6 +61,16 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
 
     @Column(name = "withdraw_reason", length = 255) // 관리자가 강제 탈퇴시킨 경우의 사유 (자진 탈퇴는 NULL)
     private String withdrawReason;
+
+    @Builder.Default
+    @ColumnDefault("0") // 이미 데이터가 있는 테이블에 컬럼 추가 시 NOT NULL 위반 방지
+    @Column(name = "report_count", nullable = false)
+    private Integer reportCount = 0;
+
+    @Builder.Default
+    @ColumnDefault("false") // 이미 데이터가 있는 테이블에 컬럼 추가 시 NOT NULL 위반 방지
+    @Column(name = "is_suspicious", nullable = false)
+    private boolean isSuspicious = false; // 신고 5회 누적 시 자동 전환
 
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;

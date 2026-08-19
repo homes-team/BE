@@ -35,4 +35,12 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Modifying
     @Query("UPDATE ChatRoom r SET r.agentLeft = true WHERE r.id = :roomId")
     void markAgentLeft(@Param("roomId") Long roomId);
+
+    /**
+     * 두 유저 사이에 채팅방이 존재했던 적이 있는지 확인 (유저 신고 시, 접촉한 적 있는 사람만 신고 가능하도록 검증)
+     */
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM ChatRoom r WHERE " +
+            "(r.user.id = :userId1 AND r.agentUser.id = :userId2) OR " +
+            "(r.user.id = :userId2 AND r.agentUser.id = :userId1)")
+    boolean existsRoomBetween(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 }
