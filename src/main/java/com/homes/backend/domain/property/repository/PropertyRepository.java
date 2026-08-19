@@ -3,6 +3,7 @@ package com.homes.backend.domain.property.repository;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -97,8 +98,9 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, Prope
 
     /**
      * 관리자용 신고된 매물 목록. 신고 많은 순 정렬(의심 매물은 reportCount>=5라 자연히 위쪽에 몰림).
-     * 이미 삭제 처리된 매물은 더 조치할 게 없으므로 제외
+     * 이미 삭제 처리된 매물은 더 조치할 게 없으므로 제외. 소유자 ID를 같이 내려주므로 user를 함께 fetch
      */
+    @EntityGraph(attributePaths = "user")
     List<Property> findByReportCountGreaterThanAndStatusNotOrderByReportCountDesc(Integer reportCount, PropertyStatus excludedStatus);
 
     /**

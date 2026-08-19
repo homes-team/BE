@@ -4,6 +4,7 @@ import com.homes.backend.domain.property.entity.Property;
 
 public record AdminReportedPropertyResDto(
         Long propertyId,
+        Long ownerId,
         String title,
         String address,
         int reportCount,
@@ -12,6 +13,7 @@ public record AdminReportedPropertyResDto(
     public static AdminReportedPropertyResDto from(Property property) {
         return new AdminReportedPropertyResDto(
                 property.getId(),
+                property.getUser().getId(),
                 property.getTitle(),
                 property.getAddress(),
                 property.getReportCount(),
