@@ -58,6 +58,9 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
     @Column(name = "deleted_at") // NULL이면 활성 계정, 값이 있으면 탈퇴한 계정
     private LocalDateTime deletedAt;
 
+    @Column(name = "withdraw_reason", length = 255) // 관리자가 강제 탈퇴시킨 경우의 사유 (자진 탈퇴는 NULL)
+    private String withdrawReason;
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
@@ -79,7 +82,7 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
      * 신고·거래 기록 같은 감사 데이터도 보존해야 하므로 소프트 삭제로 처리한다.
      * 이메일/닉네임은 UNIQUE라 재가입 시 값이 겹치지 않도록 고유한 값으로 치환한다.
      */
-    public void anonymize() {
+    public void anonymize(String withdrawReason) {
         this.email = "withdrawn-" + this.id + "@deleted.homes";
         this.password = null;
         this.name = null;
@@ -88,5 +91,6 @@ public class User extends BaseEntity { //BaseEntity에서 생성일자 처리
         this.providerId = null;
         this.refreshToken = null;
         this.deletedAt = LocalDateTime.now();
+        this.withdrawReason = withdrawReason;
     }
 }

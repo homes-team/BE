@@ -198,19 +198,33 @@ public class UserService {
      */
     @Transactional
     public void deleteAccount(Long userId, String accessToken) {
+        anonymizeAndCleanup(userId, null);
+
+        // 지금 요청에 쓰인 Access Token도 만료 전까지 즉시 무효화 (본인 탈퇴에만 해당 - 이 요청 자체가 그 토큰으로 인증됨)
+        blacklistAccessToken(accessToken);
+    }
+
+    /**
+     * 관리자용 강제 탈퇴. 본인 탈퇴(deleteAccount)와 같은 익명화 로직을 쓰되,
+     * 관리자가 대상 유저의 accessToken을 알 수 없으므로 그 토큰을 블랙리스트에 올리는 절차는 없다
+     * (이메일이 스크럽되므로 기존 토큰은 다음 인증 시점에 자연히 무효화된다).
+     */
+    @Transactional
+    public void forceWithdraw(Long userId, String reason) {
+        anonymizeAndCleanup(userId, reason);
+    }
+
+    private void anonymizeAndCleanup(Long userId, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
         propertyFavoriteRepository.deleteAllByUserId(userId);
         recentViewRepository.deleteAllByUserId(userId);
         agentRepository.deleteByUserId(userId);
-        user.anonymize();
+        user.anonymize(reason);
 
         // 탈퇴한 계정으로 새 토큰을 재발급받지 못하도록 Refresh Token도 함께 폐기
         redisTemplate.delete("RT:" + userId);
-
-        // 지금 요청에 쓰인 Access Token도 만료 전까지 즉시 무효화
-        blacklistAccessToken(accessToken);
     }
 
     //Redis를 활용한 로그아웃 (블랙리스트 등록)

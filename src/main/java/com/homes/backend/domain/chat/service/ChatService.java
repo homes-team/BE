@@ -122,6 +122,10 @@ public class ChatService {
     public ChatMessageListResDto sendMessage(Long chatId, Long senderId, String content) {
         ChatRoom room = getRoomAndValidateMembership(chatId, senderId);
 
+        if (room.isSuspended()) {
+            throw new CustomException(ChatErrorCode.CHAT_ROOM_SUSPENDED);
+        }
+
         boolean senderIsUserSide = room.isUserSide(senderId);
         User sender = senderIsUserSide ? room.getUser() : room.getAgentUser();
         User recipient = senderIsUserSide ? room.getAgentUser() : room.getUser();

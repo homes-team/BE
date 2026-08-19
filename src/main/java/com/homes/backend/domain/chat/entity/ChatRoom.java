@@ -17,6 +17,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Getter
@@ -48,6 +49,10 @@ public class ChatRoom extends BaseEntity {
     @Column(name = "is_agent_left", nullable = false)
     private boolean agentLeft = false;
 
+    @ColumnDefault("false") // 이미 데이터가 있는 테이블에 컬럼 추가 시 NOT NULL 위반 방지
+    @Column(name = "is_suspended", nullable = false)
+    private boolean suspended = false; // 관리자가 정지시킨 채팅방 - 새 메시지 전송만 막고 기존 대화 내역은 보존
+
     @Builder
     public ChatRoom(Property property, User user, User agentUser) {
         this.property = property;
@@ -72,5 +77,12 @@ public class ChatRoom extends BaseEntity {
 
     public boolean isMember(Long userId) {
         return this.user.getId().equals(userId) || this.agentUser.getId().equals(userId);
+    }
+
+    /**
+     * 관리자용 채팅방 정지 - 새 메시지 전송만 막는다. 기존 메시지 내역은 그대로 조회 가능
+     */
+    public void suspend() {
+        this.suspended = true;
     }
 }
