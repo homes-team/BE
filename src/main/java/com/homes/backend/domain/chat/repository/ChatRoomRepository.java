@@ -37,10 +37,13 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     void markAgentLeft(@Param("roomId") Long roomId);
 
     /**
-     * 두 유저 사이에 채팅방이 존재했던 적이 있는지 확인 (유저 신고 시, 접촉한 적 있는 사람만 신고 가능하도록 검증)
+     * 두 유저 사이에 실제로 메시지를 주고받은 채팅방이 있는지 확인 (유저 신고 시, 접촉한 적 있는 사람만 신고 가능하도록 검증).
+     * 채팅방은 메시지 없이도 생성될 수 있어서(자동 삭제 로직 없음), 단순히 방 존재 여부만으로는 부족하고
+     * 실제 메시지 교환 이력까지 확인해야 한다.
      */
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM ChatRoom r WHERE " +
-            "(r.user.id = :userId1 AND r.agentUser.id = :userId2) OR " +
-            "(r.user.id = :userId2 AND r.agentUser.id = :userId1)")
+            "((r.user.id = :userId1 AND r.agentUser.id = :userId2) OR " +
+            "(r.user.id = :userId2 AND r.agentUser.id = :userId1)) " +
+            "AND EXISTS (SELECT 1 FROM ChatMessage m WHERE m.room = r)")
     boolean existsRoomBetween(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 }
