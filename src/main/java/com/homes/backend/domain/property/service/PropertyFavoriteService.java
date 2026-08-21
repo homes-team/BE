@@ -36,14 +36,14 @@ public class PropertyFavoriteService {
         Property property=propertyRepository.findById(propertyId)
                 .orElseThrow(()->new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
-        /**
+        /*
          * 본인 매물인지 검증(본인 매물일시 찜 불가)
          */
         if (property.getUser().getId().equals(userId)) {
             throw new CustomException(PropertyErrorCode.CANNOT_FAVORITE_OWN_PROPERTY);
         }
 
-        /**
+        /*
          * 토클 로직: 이미 찜 했으면 삭제, 아님 생성
          */
         Optional<PropertyFavorite> existingFavorite = favoriteRepository.findByUserAndProperty(user,property);
@@ -52,7 +52,7 @@ public class PropertyFavoriteService {
             favoriteRepository.delete(existingFavorite.get());
             propertyRepository.decreaseFavoriteCount(propertyId);
 
-            /**
+            /*
              * 찜 취소 시 랭킹 점수 5점 차감
              */
             try {
@@ -73,7 +73,7 @@ public class PropertyFavoriteService {
 
                 propertyRepository.increaseFavoriteCount(propertyId);
 
-                /**
+                /*
                  * 찜 등록 시 랭킹 점수 5점 증가
                  */
                 try {

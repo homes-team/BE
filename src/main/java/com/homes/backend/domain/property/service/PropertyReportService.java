@@ -37,21 +37,21 @@ public class PropertyReportService {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
-        /**
+        /*
          * 내가 등록한 매물 신고 불가
          */
         if (property.getUser().getId().equals(userId)) {
             throw new CustomException(PropertyErrorCode.CANNOT_REPORT_OWN_PROPERTY);
         }
 
-        /**
+        /*
          * 중복 신고 방지
          */
         if (reportRepository.existsByPropertyAndReporter(property, user)) {
             throw new CustomException(PropertyErrorCode.ALREADY_REPORTED);
         }
 
-        /**
+        /*
          * 기타 사유(OTHER)일 때 사용
          */
         String savedCustomReason = null;
@@ -59,7 +59,7 @@ public class PropertyReportService {
             savedCustomReason = reqDto.customReason();
         }
 
-        /**
+        /*
          * 저장
          */
         try {

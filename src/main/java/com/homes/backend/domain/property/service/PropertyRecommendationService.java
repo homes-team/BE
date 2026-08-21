@@ -21,7 +21,7 @@ public class PropertyRecommendationService {
     private final RecentViewRepository recentViewRepository; // 2. 의존성 주입 추가
 
     public List<PropertyListRespDto> getRecommendations(Long userId, Double minPrice, Double maxPrice, String preferredRegion) {
-        /**
+        /*
          * 비로그인 유저 허용 X
          */
         if (userId == null) {

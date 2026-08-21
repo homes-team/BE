@@ -5,10 +5,7 @@ import com.homes.backend.domain.property.dto.request.PropertyMapSearchReqDto;
 import com.homes.backend.domain.property.dto.request.PropertyUpdateReqDto;
 import com.homes.backend.domain.property.dto.response.PropertyDetailRespDto;
 import com.homes.backend.domain.property.dto.response.PropertyListRespDto;
-import com.homes.backend.domain.property.entity.Property;
-import com.homes.backend.domain.property.entity.PropertyFavorite;
-import com.homes.backend.domain.property.entity.PropertyImage;
-import com.homes.backend.domain.property.entity.PropertyStatus;
+import com.homes.backend.domain.property.entity.*;
 import com.homes.backend.domain.property.exception.PropertyErrorCode;
 import com.homes.backend.domain.property.repository.*;
 import com.homes.backend.domain.user.entity.User;
@@ -49,13 +46,13 @@ public class PropertyService {
         User user=userRepository.findById(userId)
                 .orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        /**
+        /*
          *  Double 위도/경도를 공간 데이터(Point)로 변환
          *  (Coordinate는 X(경도), Y(위도) 순서로 넣음)
-          */
+        */
         Point point = geometryFactory.createPoint(new Coordinate(reqDto.longitude(), reqDto.latitude()));
 
-        /**
+        /*
          * 가장 가까운 지하철역 찾기
          */
         StationDistanceProjection nearestResult = stationRepository.findNearestStationWithDistance(point);
@@ -75,7 +72,7 @@ public class PropertyService {
             }
         }
 
-        /**
+        /*
          *  자동 부제목 생성 로직 (예: "서울시 강남구 역삼동 123" -> "강남구 역삼동 원/투룸")
          */
         String generatedTitle = generateAutomatedTitle(reqDto.address(), reqDto.propertyType().getDescription());
@@ -103,7 +100,7 @@ public class PropertyService {
                 .status(PropertyStatus.AVAILABLE)
                 .build();
 
-        /**
+        /*
          * 다중이미지 업로드
           */
         if (images != null && !images.isEmpty()) {
@@ -130,7 +127,7 @@ public class PropertyService {
      */
     private String generateAutomatedTitle(String fullAddress, String propertyDescription) {
         String[] addressParts = fullAddress.split(" ");
-        /**
+        /*
          * 카카오 주소 API 결과 : 보통 "시 구 동 ..." 순서로 배치
          * -> 구&동 가져오기
          */
@@ -199,13 +196,13 @@ public class PropertyService {
 
         validateOwnership(property, userId);
 
-        /**
+        /*
          * 수정된 데이터에 맞춰 위경도 Point 변환 및 자동 부제목 재조립
          */
         Point point = geometryFactory.createPoint(new Coordinate(reqDto.longitude(), reqDto.latitude()));
         String updatedTitle = generateAutomatedTitle(reqDto.address(), reqDto.propertyType().getDescription());
 
-        /**
+        /*
          * 주소가 변경되었을 수 있으므로 가장 가까운 지하철역 다시 계산
           */
         StationDistanceProjection nearestResult = stationRepository.findNearestStationWithDistance(point);
@@ -236,7 +233,7 @@ public class PropertyService {
                 calcWalkingTime
         );
 
-        /**
+        /*
          * 새 이미지 업로드 시
          */
         if (newImages != null && !newImages.isEmpty()) {
@@ -276,7 +273,7 @@ public class PropertyService {
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> searchMapProperties(PropertyMapSearchReqDto reqDto, String role, Long userId) {
 
-        /**
+        /*
          * Bounding Box 생성
          */
         Coordinate[] coords = new Coordinate[]{
@@ -289,7 +286,7 @@ public class PropertyService {
         Polygon boundingBox = geometryFactory.createPolygon(coords);
         boundingBox.setSRID(4326); // 4236: GPS(WGS84) 표준 좌표계
 
-        /**
+        /*
          * 권한별 지도 매물 상태 노출 필터링
          */
         List<PropertyStatus> targetStatuses;
@@ -301,23 +298,23 @@ public class PropertyService {
             targetStatuses = List.of(PropertyStatus.AVAILABLE, PropertyStatus.MATCHED);
         }
 
-        /**
+        /*
          * 추천순 정렬일 때만 최근 본 방 ID 리스트 조회
          */
 
-        String normalizedSortBy = (reqDto.sortBy() == null || reqDto.sortBy().isBlank())
-                ? "RECOMMENDED"
+        PropertySortType normalizedSortBy = (reqDto.sortBy() == null)
+                ? PropertySortType.RECOMMENDED
                 : reqDto.sortBy();
 
         List<Long> recentViewedIds = List.of();
-        if ("RECOMMENDED".equals(normalizedSortBy) && userId != null) {
+        if (normalizedSortBy == PropertySortType.RECOMMENDED && userId != null) {
             recentViewedIds = recentViewRepository.findTop20ByUserIdAndPropertyStatusNotOrderByViewedAtDesc(userId, PropertyStatus.DELETED)
                     .stream()
                     .map(rv -> rv.getProperty().getId())
                     .toList();
         }
 
-        /**
+        /*
          * QueryDSL 리포지토리 호출
          */
         List<Property> properties = propertyRepository.findPropertiesByMapAndFilters(

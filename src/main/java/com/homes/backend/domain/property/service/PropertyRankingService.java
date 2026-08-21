@@ -53,7 +53,7 @@ public class PropertyRankingService {
      */
     @Transactional(readOnly = true)
     public List<PropertyListRespDto> getSurgeRankings() {
-        /**
+        /*
          * ZREVRANGE를 이용해 가중치 합산 점수가 높은 순으로 상위 10개 조회
          */
         Set<String> typedTuples = redisTemplate.opsForZSet().reverseRange(RANKING_KEY, 0, 9);
@@ -68,7 +68,7 @@ public class PropertyRankingService {
 
         List<Property> properties = propertyRepository.findByIdInAndStatusNot(propertyIds, PropertyStatus.DELETED);
 
-        /**
+        /*
          * Redis 순서(인기순)대로 정렬
          */
         return propertyIds.stream()

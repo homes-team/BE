@@ -86,20 +86,20 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
     /**
      * sortBy 값에 따른 정렬 분기 메서드 추가
      */
-    private OrderSpecifier<?>[] getOrderSpecifier(String sortBy, List<Long> recentViewedIds) {
-        if ("RECOMMENDED".equals(sortBy)) {
+    private OrderSpecifier<?>[] getOrderSpecifier(PropertySortType sortBy, List<Long> recentViewedIds) {
+        if (sortBy == PropertySortType.RECOMMENDED) {
             return new OrderSpecifier[]{
                     recommendationScore(recentViewedIds).desc(),
                     property.id.desc()
             };
         }
-        if ("FAVORITE".equals(sortBy)) {
+        if (sortBy == PropertySortType.FAVORITE) {
             return new OrderSpecifier[]{
                     property.favoriteCount.desc(),
                     property.id.desc()
             };
         }
-        if ("LATEST".equals(sortBy)) {
+        if (sortBy == PropertySortType.LATEST) {
             return new OrderSpecifier[]{
                     property.id.desc()
             };
@@ -138,7 +138,7 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
             Polygon boundingBox, List<PropertyStatus> statuses, TradeType tradeType,
             PropertyType propertyType, Integer minDeposit, Integer maxDeposit,
             Integer minMonthlyRent, Integer maxMonthlyRent, Double minArea, Double maxArea,
-            String keyword, List<PropertyOption> options, String sortBy, List<Long> recentViewedIds
+            String keyword, List<PropertyOption> options, PropertySortType sortBy, List<Long> recentViewedIds
     ) {
 
         return queryFactory
@@ -155,6 +155,7 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom{
                         optionsContainAll(options)
                 )
                 .orderBy(getOrderSpecifier(sortBy, recentViewedIds))
+                .limit(300)
                 .fetch();
     }
 
