@@ -95,10 +95,20 @@ public record PropertyMapSearchReqDto(
     /**
      * 검증: 지도 좌표 역전 방어 (남서쪽은 북동쪽보다 작아야 함)
      */
-    @AssertTrue(message = "지도 좌표가 유효하지 않습니다. 남서쪽 좌표가 북동쪽 좌표보다 작아야 합니다.")
+    @AssertTrue(message = "지도 좌표가 유효하지 않거나 WGS84 범위를 벗어났습니다. (위도: -90~90, 경도: -180~180)")
     public boolean isValidCoordinate() {
+        // 역전 방어 (남서쪽은 북동쪽보다 작아야 함)
         if (swLat != null && neLat != null && swLat >= neLat) return false;
         if (swLng != null && neLng != null && swLng >= neLng) return false;
+
+        // WGS84 유효 범위 검증 (위도: -90 ~ 90)
+        if (swLat != null && (swLat < -90 || swLat > 90)) return false;
+        if (neLat != null && (neLat < -90 || neLat > 90)) return false;
+
+        // WGS84 유효 범위 검증 (경도: -180 ~ 180)
+        if (swLng != null && (swLng < -180 || swLng > 180)) return false;
+        if (neLng != null && (neLng < -180 || neLng > 180)) return false;
+
         return true;
     }
 }
