@@ -266,7 +266,7 @@ public class BidService {
             throw new CustomException(BidErrorCode.BID_PROPERTY_MISMATCH);
         }
 
-        /**
+        /*qw9
          * 역할별 검증
          */
         if ("USER".equals(role)) { // 집주인: 해당 매물의 소유자가 맞는지 검증

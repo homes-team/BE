@@ -24,7 +24,7 @@ public interface PropertyRepositoryCustom {
             Double maxArea,
             String keyword,
             List<PropertyOption> options,
-            String sortBy,
+            PropertySortType sortBy,
             List<Long> recentViewedIds
     );
 }
