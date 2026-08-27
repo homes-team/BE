@@ -37,7 +37,7 @@ public class RealtorVerificationService {
      */
     @Transactional
     public VerificationStatus verifyOnSite(Long propertyId, Long userId, RealtorVerificationReqDto reqDto) {
-        Property property = propertyRepository.findById(propertyId)
+        Property property = propertyRepository.findByIdWithPessimisticLock(propertyId)
                 .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
         Agent agent = agentRepository.findByUserId(userId)
@@ -89,6 +89,11 @@ public class RealtorVerificationService {
      */
     @Transactional(readOnly = true)
     public VerificationStatusRespDto getVerificationStatus(Long propertyId) {
+        // 매물이 실제로 존재하는지 먼저 검증 (없으면 404 에러 발생)
+        if (!propertyRepository.existsById(propertyId)) {
+            throw new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND);
+        }
+
         RealtorVerification latestVerification = realtorVerificationRepository
                 .findTopByPropertyIdOrderByRequestedAtDesc(propertyId)
                 .orElse(null);

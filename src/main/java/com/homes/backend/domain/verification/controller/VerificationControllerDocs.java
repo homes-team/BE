@@ -34,7 +34,8 @@ public interface VerificationControllerDocs {
 
     @Operation(summary = "매물 인증 상태 조회", description = "특정 매물의 현재 인증 상태(집주인 서류 인증 여부, 중개사 현장 인증 상태)를 조회합니다.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true)
+            @ApiResponse(responseCode = "200", description = "조회 성공", useReturnTypeSchema = true),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 매물", content = @Content)
     })
     ResponseEntity<VerificationStatusRespDto> getVerificationStatus(
             @Parameter(description = "조회할 매물의 ID", example = "1") @PathVariable Long propertyId

@@ -93,6 +93,7 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, Prope
     @Query("SELECT p FROM Property p WHERE p.id = :id")
     Optional<Property> findByIdWithPessimisticLock(@Param("id") Long id);
 
+
     /**
      * 관리자용 신고된 매물 목록. 신고 많은 순 정렬(의심 매물은 reportCount>=5라 자연히 위쪽에 몰림).
      * 이미 삭제 처리된 매물은 더 조치할 게 없으므로 제외. 소유자 ID를 같이 내려주므로 user를 함께 fetch
