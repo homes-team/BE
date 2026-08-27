@@ -3,11 +3,8 @@ package com.homes.backend.domain.property.repository;
 import com.homes.backend.domain.property.entity.Property;
 import com.homes.backend.domain.property.entity.PropertyStatus;
 import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.locationtech.jts.geom.Point;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -107,4 +104,10 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, Prope
      * 급등 랭킹 조회용. Redis에는 삭제된 매물의 ID가 여전히 남아있을 수 있으므로 여기서 걸러낸다
      */
     List<Property> findByIdInAndStatusNot(List<Long> ids, PropertyStatus excludedStatus);
+
+    /**
+     * 중개사 현장 인증용: 매물 좌표와 중개사 현재 GPS 좌표 사이의 거리(미터) 계산
+     */
+    @Query(value = "SELECT ST_DistanceSphere(coordinate, :realtorLocation) FROM properties WHERE id = :propertyId", nativeQuery = true)
+    Double calculateDistanceToProperty(@Param("propertyId") Long propertyId, @Param("realtorLocation") Point realtorLocation);
 }

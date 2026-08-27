@@ -121,7 +121,8 @@ public class SecurityConfig {
                                 "/properties",
                                 "/properties/{propertyId}",
                                 "/properties/map",
-                                "/properties/surge-rankings"
+                                "/properties/surge-rankings",
+                                "/properties/*/verifications"
                         ).permitAll()
 
                         // Swagger 관련 프리패스 주소 (이건 기존 yml 설정에 맞게 유지)
