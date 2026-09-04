@@ -2,39 +2,74 @@ package com.homes.backend.global.util;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 @Slf4j
 @Component
 public class ExifExtractor {
-    public record ExifData(Double latitude, Double longitude) {}
+    //  DTO에 촬영 시각 추가
+    public ExifData extractExif(String imageUrl) {
+        // SSRF 방어: 허용된 프로토콜 및 호스트만 접근 허용
+        if (!imageUrl.startsWith("https://") && !imageUrl.startsWith("http://localhost")) {
+            log.warn("SSRF 차단 - 허용되지 않은 URL 프로토콜: {}", imageUrl);
+            return null;
+        }
+        // TODO: 실제 운영 시 S3 버킷 도메인 검증 추가(배포 완료 후에 작업 진행)
+        // if (!imageUrl.contains("s3.ap-northeast-2.amazonaws.com")) { return null; }
 
-    /**
-     * 이미지 URL에서 EXIF GPS 정보를 추출합니다.
-     */
-    public ExifData extractGpsFromUrl(String imageUrl) {
-        try (InputStream is = new URL(imageUrl).openStream()) {
-            Metadata metadata = ImageMetadataReader.readMetadata(is);
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(imageUrl);
+            connection = (HttpURLConnection) url.openConnection();
 
-            // GPS 디렉토리 추출
-            GpsDirectory gpsDir = metadata.getFirstDirectoryOfType(GpsDirectory.class);
-            if (gpsDir == null || gpsDir.getGeoLocation() == null) {
-                return null; // GPS 정보가 없는 경우 (스크린샷, 웹 다운로드 이미지 등)
+            // 무한 대기 방지를 위한 타임아웃 설정 (연결 3초, 읽기 5초)
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(5000);
+            connection.setRequestMethod("GET");
+
+            try (InputStream is = connection.getInputStream()) {
+                Metadata metadata = ImageMetadataReader.readMetadata(is);
+
+                // GPS 추출
+                GpsDirectory gpsDir = metadata.getFirstDirectoryOfType(GpsDirectory.class);
+                if (gpsDir == null || gpsDir.getGeoLocation() == null) {
+                    return null;
+                }
+                double lat = gpsDir.getGeoLocation().getLatitude();
+                double lon = gpsDir.getGeoLocation().getLongitude();
+
+                // 촬영 시각 추출 (과거 사진 재탕 방지)
+                ExifSubIFDDirectory subIFDDirectory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+                LocalDateTime originalDate = null;
+
+                if (subIFDDirectory != null) {
+                    Date date = subIFDDirectory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+                    if (date != null) {
+                        originalDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                    }
+                }
+
+                return new ExifData(lat, lon, originalDate);
             }
-
-            double lat = gpsDir.getGeoLocation().getLatitude();
-            double lon = gpsDir.getGeoLocation().getLongitude();
-
-            return new ExifData(lat, lon);
-
         } catch (Exception e) {
             log.error("EXIF 추출 중 오류 발생: {}", e.getMessage());
             return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect(); // 자원 해제
+            }
         }
     }
 }
+
+
