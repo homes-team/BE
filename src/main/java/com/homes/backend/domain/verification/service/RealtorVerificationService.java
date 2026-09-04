@@ -13,6 +13,7 @@ import com.homes.backend.domain.verification.entity.VerificationStatus;
 import com.homes.backend.domain.verification.exception.VerificationErrorCode;
 import com.homes.backend.domain.verification.repository.RealtorVerificationRepository;
 import com.homes.backend.global.exception.CustomException;
+import com.homes.backend.global.util.ExifExtractor;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -31,6 +32,7 @@ public class RealtorVerificationService {
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private static final double MAX_ALLOWED_DISTANCE_METERS = 100.0; // 허용 오차 반경 100m
+    private final ExifExtractor exifExtractor;
 
     /**
      * 중개사 현장 인증 요청
@@ -56,6 +58,24 @@ public class RealtorVerificationService {
         // 이미 승인(APPROVED) 상태라면 새로 만든 에러 발생
         if (latestVerification != null && latestVerification.getStatus() == VerificationStatus.APPROVED) {
             throw new CustomException(VerificationErrorCode.ALREADY_VERIFIED);
+        }
+
+        // 사진 EXIF 메타데이터 검증
+        ExifExtractor.ExifData exifData = exifExtractor.extractGpsFromUrl(reqDto.photoUrl());
+
+        // EXIF 데이터 자체가 없는 경우 차단 (스크린샷 방지)
+        if (exifData == null) {
+            throw new CustomException(VerificationErrorCode.EXIF_NOT_FOUND);
+        }
+
+        // 사진에 기록된 GPS 위치 Point 생성
+        Point photoLocation = geometryFactory.createPoint(new Coordinate(exifData.longitude(), exifData.latitude()));
+
+        // 사진이 찍힌 위치와 매물 위치의 거리 계산
+        Double photoDistance = propertyRepository.calculateDistanceToProperty(propertyId, photoLocation);
+
+        if (photoDistance == null || photoDistance > MAX_ALLOWED_DISTANCE_METERS) {
+            throw new CustomException(VerificationErrorCode.EXIF_GPS_NOT_MATCH);
         }
 
         // 중개사가 현재 서 있는 GPS 위치 Point 생성 (경도, 위도 순서)
