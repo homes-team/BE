@@ -38,5 +38,7 @@ public record RealtorSignupReqDto(
         String businessNum,
 
         @Schema(description = "중개사무소 주소 (선택, 나중에 등록 가능). 위경도는 이 주소를 기반으로 서버가 자동으로 채운다.", example = "서울 강남구 역삼동 123-45")
+        @Size(max = 255, message = "중개사무소 주소는 255자를 초과할 수 없습니다.")
+        @Pattern(regexp = ".*\\S.*", message = "중개사무소 주소는 공백만으로 입력할 수 없습니다.")
         String officeAddress
 ) {}
