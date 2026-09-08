@@ -12,14 +12,11 @@ import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
-import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -27,7 +24,6 @@ import java.util.List;
 public class PropertyService {
 
     private final PropertyRepository propertyRepository;
-    private final LocalFileUploader localFileUploader; // S3 대신 로컬 업로더 주입
     private final UserRepository userRepository;
     private final PropertyFavoriteRepository propertyFavoriteRepository;
     private final RecentViewRepository recentViewRepository;
@@ -42,7 +38,7 @@ public class PropertyService {
      * 매물 등록 (Create)
      */
     @Transactional
-    public Long createProperty(PropertyCreateReqDto reqDto, Long userId, List<MultipartFile> images) throws IOException {
+    public Long createProperty(PropertyCreateReqDto reqDto, Long userId) {
         User user=userRepository.findById(userId)
                 .orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
@@ -101,17 +97,15 @@ public class PropertyService {
                 .build();
 
         /*
-         * 다중이미지 업로드
-          */
-        if (images != null && !images.isEmpty()) {
-            for (int i = 0; i < images.size(); i++) {
-                String imageUrl = localFileUploader.upload(images.get(i), "properties"); // 파라미터 2개(파일, 폴더명)
+         * 매물 사진 - 클라이언트가 presigned URL로 이미 S3에 올려서 URL만 넘어온다
+         */
+        if (reqDto.imageUrls() != null && !reqDto.imageUrls().isEmpty()) {
+            List<String> imageUrls = reqDto.imageUrls();
 
-                boolean isThumbnail = (i == 0);
-
+            for (int i = 0; i < imageUrls.size(); i++) {
                 PropertyImage propertyImage = PropertyImage.builder()
-                        .imageUrl(imageUrl)
-                        .isThumbnail(isThumbnail)
+                        .imageUrl(imageUrls.get(i))
+                        .isThumbnail(i == 0)
                         .property(property)
                         .build();
 
@@ -190,7 +184,7 @@ public class PropertyService {
      * 매물 수정 (Update)
      */
     @Transactional
-    public void updateProperty(Long propertyId, PropertyUpdateReqDto reqDto, List<MultipartFile> newImages, Long userId) throws IOException {
+    public void updateProperty(Long propertyId, PropertyUpdateReqDto reqDto, Long userId) {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new CustomException(PropertyErrorCode.PROPERTY_NOT_FOUND));
 
@@ -234,17 +228,16 @@ public class PropertyService {
         );
 
         /*
-         * 새 이미지 업로드 시
+         * 새 사진 URL이 오면 기존 사진 전체를 교체 - 클라이언트가 presigned URL로 이미 S3에 올려서 URL만 넘어온다
          */
-        if (newImages != null && !newImages.isEmpty()) {
+        if (reqDto.newImageUrls() != null && !reqDto.newImageUrls().isEmpty()) {
+            List<String> newImageUrls = reqDto.newImageUrls();
 
             property.getImages().clear();
 
-            for (int i = 0; i < newImages.size(); i++) {
-                String imageUrl = localFileUploader.upload(newImages.get(i), "properties"); // 파라미터 2개(파일, 폴더명)
-
+            for (int i = 0; i < newImageUrls.size(); i++) {
                 PropertyImage propertyImage = PropertyImage.builder()
-                        .imageUrl(imageUrl)
+                        .imageUrl(newImageUrls.get(i))
                         .isThumbnail(i == 0)
                         .property(property)
                         .build();
