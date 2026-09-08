@@ -21,6 +21,8 @@ import com.homes.backend.domain.user.entity.User;
 import com.homes.backend.domain.user.exception.UserErrorCode;
 import com.homes.backend.domain.user.repository.UserRepository;
 import com.homes.backend.global.exception.CustomException;
+import com.homes.backend.global.geocoding.GeocodedPoint;
+import com.homes.backend.global.geocoding.GeocodingService;
 import com.homes.backend.global.util.LocalFileUploader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -33,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +53,7 @@ public class RealtorService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final LocalFileUploader localFileUploader;
     private final RealtorAccountWriter realtorAccountWriter;
+    private final GeocodingService geocodingService;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public RealtorSignupResDto signUp(
@@ -88,10 +92,15 @@ public class RealtorService {
         String agentCertUrl = localFileUploader.upload(agentCertImage, "agent-certs");
         String profileImageUrl = localFileUploader.upload(profileImage, "agent-profiles");
 
+        // 5-1. 사무소 주소 -> 위경도 자동 변환 (실패해도 가입 자체는 막지 않음)
+        Optional<GeocodedPoint> geocodedPoint = geocodingService.geocode(request.officeAddress());
+        Double officeLatitude = geocodedPoint.map(GeocodedPoint::latitude).orElse(null);
+        Double officeLongitude = geocodedPoint.map(GeocodedPoint::longitude).orElse(null);
+
         // 6. 중개사 프로필 생성 (관리자 승인 전까지 isVerified=false로 대기)
         Agent savedAgent;
         try {
-            savedAgent = realtorAccountWriter.write(user, request, businessCertUrl, agentCertUrl, profileImageUrl);
+            savedAgent = realtorAccountWriter.write(user, request, businessCertUrl, agentCertUrl, profileImageUrl, officeLatitude, officeLongitude);
         } catch (RuntimeException e) {
             localFileUploader.delete(businessCertUrl);
             localFileUploader.delete(agentCertUrl);
@@ -116,8 +125,16 @@ public class RealtorService {
 
         String officeName = request.officeName() != null ? request.officeName() : agent.getOfficeName();
         String officeAddress = request.officeAddress() != null ? request.officeAddress() : agent.getOfficeAddress();
-        Double officeLatitude = request.officeLatitude() != null ? request.officeLatitude() : agent.getOfficeLatitude();
-        Double officeLongitude = request.officeLongitude() != null ? request.officeLongitude() : agent.getOfficeLongitude();
+
+        Double officeLatitude = agent.getOfficeLatitude();
+        Double officeLongitude = agent.getOfficeLongitude();
+
+        // 주소가 바뀌면 위경도도 새로 계산한다 (실패 시 null로 - 옛 주소의 좌표를 그대로 남겨두면 주소-좌표가 서로 어긋나게 됨)
+        if (request.officeAddress() != null) {
+            Optional<GeocodedPoint> geocodedPoint = geocodingService.geocode(request.officeAddress());
+            officeLatitude = geocodedPoint.map(GeocodedPoint::latitude).orElse(null);
+            officeLongitude = geocodedPoint.map(GeocodedPoint::longitude).orElse(null);
+        }
 
         agent.updateOfficeProfile(officeName, officeAddress, officeLatitude, officeLongitude);
 
